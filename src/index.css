@@ -1,0 +1,73 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Jost:wght@300;400;500&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  /* Wyłącznie paleta Patkowe Cudeńka — zakaz zimnych szarości, #FFF i #000 */
+  --color-*: initial;
+
+  /* Pudrowy róż */
+  --color-rose-25: #fdf8f5;
+  --color-rose-50: #faf0ed;
+  --color-rose-100: #f6e3df;
+  --color-rose-200: #efd1cb;
+  --color-rose-300: #e3b6ad;
+  --color-rose-400: #d3968a;
+  --color-rose-500: #bf7668;
+  --color-rose-600: #a05a4c;
+  --color-rose-700: #7f4539;
+
+  /* Złoto — oszczędnie, w detalach */
+  --color-gold-100: #f8f0dc;
+  --color-gold-200: #f0e2bc;
+  --color-gold-300: #e3cb9c;
+  --color-gold-400: #d4b270;
+  --color-gold-500: #c39a58;
+  --color-gold-600: #a87f3e;
+  --color-gold-700: #8a6730;
+
+  /* Kremowa biel */
+  --color-cream-25: #fefbf5;
+  --color-cream-50: #fbf6ec;
+  --color-cream-100: #f6eddd;
+  --color-cream-200: #efe1c9;
+
+  /* Ciepły brąz — tylko tekst, bez ciemnych powierzchni */
+  --color-brown-200: #d9c8bc;
+  --color-brown-300: #c0a99b;
+  --color-brown-400: #9a7e72;
+  --color-brown-500: #8a6f62;
+  --color-brown-600: #7a6154;
+  --color-brown-700: #6d564a;
+  --color-brown-800: #594338;
+
+  /* Informacja zwrotna — zawsze ciepła */
+  --color-success-100: #eff1df;
+  --color-success-500: #7d8a4e;
+  --color-success-700: #5a6536;
+  --color-error-100: #f7e2db;
+  --color-error-500: #b4543f;
+  --color-error-700: #8f3e2e;
+
+  --font-sans: 'Jost', system-ui, sans-serif;
+  --font-serif: 'Cormorant Garamond', Georgia, serif;
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    min-height: 100dvh;
+    background-color: var(--color-cream-50);
+    color: var(--color-brown-800);
+    font-family: var(--font-sans);
+    /* Notch i home indicator iPhone'a (viewport-fit=cover) */
+    padding-top: env(safe-area-inset-top);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior-y: none;
+  }
+}
