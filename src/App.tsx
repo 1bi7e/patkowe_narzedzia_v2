@@ -1,12 +1,23 @@
-import { PlaceholderScreen } from './screens/PlaceholderScreen'
+import { StylistkaProvider, useStylistka } from './context/StylistkaContext'
+import { WyborKontaScreen } from './screens/WyborKontaScreen'
+import { AppShell } from './screens/AppShell'
 import { ComponentsGallery } from './screens/ComponentsGallery'
 
 export default function App() {
   // Prosty gate deweloperski — galeria komponentów pod /dev/components.
-  // Router dodamy przy budowie właściwych ekranów aplikacji.
   if (typeof window !== 'undefined' && window.location.pathname === '/dev/components') {
     return <ComponentsGallery />
   }
 
-  return <PlaceholderScreen />
+  return (
+    <StylistkaProvider>
+      <Root />
+    </StylistkaProvider>
+  )
+}
+
+/** Bez wybranego profilu pokazujemy wybór konta, w przeciwnym razie aplikację. */
+function Root() {
+  const { stylistka } = useStylistka()
+  return stylistka ? <AppShell /> : <WyborKontaScreen />
 }

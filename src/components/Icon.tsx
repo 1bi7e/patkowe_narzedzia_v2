@@ -14,6 +14,7 @@ import {
   MinusCircle,
   PencilSimple,
   Plus,
+  SignOut,
   User,
 } from '@phosphor-icons/react'
 import type { Icon as PhosphorIcon, IconWeight } from '@phosphor-icons/react'
@@ -38,6 +39,7 @@ const IKONY = {
   'minus-circle': MinusCircle,
   'pencil-simple': PencilSimple,
   plus: Plus,
+  'sign-out': SignOut,
   user: User,
 } satisfies Record<string, PhosphorIcon>
 
