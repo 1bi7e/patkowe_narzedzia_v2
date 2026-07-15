@@ -14,3 +14,17 @@ export function formatZlote(grosze: Grosze): string {
     useGrouping: 'always',
   }).format(grosze / 100)
 }
+
+/**
+ * Parsuje kwotę w złotych z pola tekstowego na grosze (integer). Akceptuje
+ * przecinek i kropkę dziesiętną oraz spacje jako separator tysięcy; maksymalnie
+ * dwa miejsca po przecinku. Zwraca null dla wejść niepoprawnych lub ≤ 0.
+ * Liczymy na całkowitych (bez floata) — grosze zawsze muszą się bilansować.
+ */
+export function parseZloteNaGrosze(tekst: string): Grosze | null {
+  const oczyszczony = tekst.trim().replace(/\s/g, '').replace(',', '.')
+  if (!/^\d+(\.\d{1,2})?$/.test(oczyszczony)) return null
+  const [calosc, ulamek = ''] = oczyszczony.split('.')
+  const grosze = Number(calosc) * 100 + Number((ulamek + '00').slice(0, 2))
+  return grosze > 0 ? grosze : null
+}

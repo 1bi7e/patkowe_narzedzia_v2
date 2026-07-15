@@ -1,14 +1,20 @@
 import { useState } from 'react'
 import { BottomNav } from '../components'
 import type { NavTab } from '../components'
+import { useStylistka } from '../context/StylistkaContext'
 import { dataWarszawa } from '../lib/dzien'
 import { useDzien } from '../lib/useDzien'
+import { DodajPlatnoscSheet } from './DodajPlatnoscSheet'
 import { DzisScreen } from './DzisScreen'
+import type { Stylistka } from '../types'
 
 /** Powłoka aplikacji po wyborze profilu: aktywna zakładka + dolna nawigacja. */
 export function AppShell() {
+  const { stylistka } = useStylistka()
+  const kto = stylistka as Stylistka
   const [tab, setTab] = useState<NavTab>('dzisiaj')
   const [dzisiaj] = useState(() => dataWarszawa())
+  const [arkuszOtwarty, setArkuszOtwarty] = useState(false)
   const stan = useDzien(dzisiaj)
 
   return (
@@ -22,8 +28,15 @@ export function AppShell() {
       </main>
 
       <div className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-md">
-        <BottomNav active={tab} onNavigate={setTab} onAdd={() => {}} />
+        <BottomNav active={tab} onNavigate={setTab} onAdd={() => setArkuszOtwarty(true)} />
       </div>
+
+      <DodajPlatnoscSheet
+        open={arkuszOtwarty}
+        onClose={() => setArkuszOtwarty(false)}
+        stylistka={kto}
+        onZapisano={() => void stan.odswiez()}
+      />
     </>
   )
 }

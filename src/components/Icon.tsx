@@ -16,6 +16,7 @@ import {
   Plus,
   SignOut,
   User,
+  X,
 } from '@phosphor-icons/react'
 import type { Icon as PhosphorIcon, IconWeight } from '@phosphor-icons/react'
 
@@ -41,6 +42,7 @@ const IKONY = {
   plus: Plus,
   'sign-out': SignOut,
   user: User,
+  x: X,
 } satisfies Record<string, PhosphorIcon>
 
 export type IconName = keyof typeof IKONY
