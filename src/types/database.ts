@@ -1,0 +1,211 @@
+/**
+ * Typ `Database` dla klienta Supabase — ręcznie odwzorowany ze schematu
+ * `supabase/migrations/20260715120000_init_schema.sql`.
+ *
+ * Po podpięciu projektu Supabase można go wygenerować automatycznie:
+ *   npx supabase gen types typescript --project-id <ref> --schema public > src/types/database.ts
+ * Uwaga: generator oznacza WSZYSTKIE kolumny widoków jako nullable (Postgres
+ * nie śledzi nullowalności widoków) — ręczna wersja poniżej jest precyzyjniejsza
+ * dla `costs_coverage`.
+ *
+ * Kwoty (`*_grosze`) to zawsze całkowite grosze — nigdy float.
+ * Daty/timestampy przychodzą z Supabase jako stringi ISO.
+ */
+
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
+export interface Database {
+  public: {
+    Tables: {
+      payments: {
+        Row: {
+          id: string
+          klientka: string
+          kwota_grosze: number
+          metoda: Database['public']['Enums']['metoda_platnosci']
+          stylistka: Database['public']['Enums']['stylistka']
+          data: string
+          locked: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          klientka: string
+          kwota_grosze: number
+          metoda: Database['public']['Enums']['metoda_platnosci']
+          stylistka: Database['public']['Enums']['stylistka']
+          data?: string
+          locked?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          klientka?: string
+          kwota_grosze?: number
+          metoda?: Database['public']['Enums']['metoda_platnosci']
+          stylistka?: Database['public']['Enums']['stylistka']
+          data?: string
+          locked?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
+      costs: {
+        Row: {
+          id: string
+          nazwa: string
+          kwota_grosze: number
+          tryb: Database['public']['Enums']['tryb_podzialu']
+          kwota_patrycja_grosze: number
+          kwota_agata_grosze: number
+          data: string
+          stylistka_dodajaca: Database['public']['Enums']['stylistka']
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          nazwa: string
+          kwota_grosze: number
+          tryb: Database['public']['Enums']['tryb_podzialu']
+          kwota_patrycja_grosze: number
+          kwota_agata_grosze: number
+          data?: string
+          stylistka_dodajaca: Database['public']['Enums']['stylistka']
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          nazwa?: string
+          kwota_grosze?: number
+          tryb?: Database['public']['Enums']['tryb_podzialu']
+          kwota_patrycja_grosze?: number
+          kwota_agata_grosze?: number
+          data?: string
+          stylistka_dodajaca?: Database['public']['Enums']['stylistka']
+          created_at?: string
+        }
+        Relationships: []
+      }
+      cost_payments: {
+        Row: {
+          id: string
+          cost_id: string
+          kwota_grosze: number
+          zrodlo: Database['public']['Enums']['zrodlo_zwrotu']
+          data: string
+          settlement_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          cost_id: string
+          kwota_grosze: number
+          zrodlo: Database['public']['Enums']['zrodlo_zwrotu']
+          data?: string
+          settlement_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          cost_id?: string
+          kwota_grosze?: number
+          zrodlo?: Database['public']['Enums']['zrodlo_zwrotu']
+          data?: string
+          settlement_id?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'cost_payments_cost_id_fkey'
+            columns: ['cost_id']
+            isOneToOne: false
+            referencedRelation: 'costs'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'cost_payments_settlement_id_fkey'
+            columns: ['settlement_id']
+            isOneToOne: false
+            referencedRelation: 'day_settlements'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      day_settlements: {
+        Row: {
+          id: string
+          data: string
+          suma_kart_patrycja_grosze: number
+          suma_kart_agata_grosze: number
+          zatwierdzila: Database['public']['Enums']['stylistka']
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          data: string
+          suma_kart_patrycja_grosze: number
+          suma_kart_agata_grosze: number
+          zatwierdzila: Database['public']['Enums']['stylistka']
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          data?: string
+          suma_kart_patrycja_grosze?: number
+          suma_kart_agata_grosze?: number
+          zatwierdzila?: Database['public']['Enums']['stylistka']
+          created_at?: string
+        }
+        Relationships: []
+      }
+    }
+    Views: {
+      costs_coverage: {
+        Row: {
+          id: string
+          nazwa: string
+          kwota_grosze: number
+          tryb: Database['public']['Enums']['tryb_podzialu']
+          kwota_patrycja_grosze: number
+          kwota_agata_grosze: number
+          data: string
+          stylistka_dodajaca: Database['public']['Enums']['stylistka']
+          created_at: string
+          /** NULL dla trybu only_mine (brak rozliczenia między stylistkami). */
+          pokryte_grosze: number | null
+          /** NULL dla trybu only_mine. */
+          pozostalo_grosze: number | null
+          /** NULL dla trybu only_mine. */
+          status_pokrycia: 'niepokryty' | 'czesciowo_pokryty' | 'pokryty' | null
+        }
+        Relationships: []
+      }
+    }
+    Functions: {
+      rozlicz_dzien: {
+        Args: {
+          p_data: string
+          p_zatwierdzila: Database['public']['Enums']['stylistka']
+          p_suma_kart_patrycja_grosze: number
+          p_suma_kart_agata_grosze: number
+          /** Tablica: [{ cost_id: uuid, kwota_grosze: liczba > 0 }, ...] */
+          p_przypisania?: Json
+        }
+        Returns: string
+      }
+    }
+    Enums: {
+      stylistka: 'patrycja' | 'agata'
+      metoda_platnosci: 'cash' | 'card'
+      tryb_podzialu: 'fifty_fifty' | 'only_mine' | 'custom'
+      zrodlo_zwrotu: 'cash' | 'card_assignment'
+    }
+    CompositeTypes: Record<string, never>
+  }
+}

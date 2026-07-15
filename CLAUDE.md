@@ -20,7 +20,7 @@ There is no test runner yet.
 
 ## Stack and code layout
 
-React 19 + Vite + TypeScript (strict) + Tailwind CSS v4 + vite-plugin-pwa. Planned but **not yet added**: Supabase (PostgreSQL + Realtime) for data, Vercel for hosting. "Login" is a profile picker (Patrycja/Agata) stored in localStorage — no passwords, it's context, not auth.
+React 19 + Vite + TypeScript (strict) + Tailwind CSS v4 + vite-plugin-pwa + Supabase (PostgreSQL + Realtime; schema in `supabase/migrations/`, typed client in [src/lib/supabase.ts](src/lib/supabase.ts), env vars per [.env.example](.env.example)). Planned but **not yet added**: Vercel for hosting. "Login" is a profile picker (Patrycja/Agata) stored in localStorage — no passwords, it's context, not auth.
 
 - `src/screens/` — full screens (spec §Ekrany aplikacji); `src/components/` — shared UI; `src/lib/` — logic/helpers; `src/types/` — domain types
 - PWA manifest and Workbox config live in [vite.config.ts](vite.config.ts); iPhone standalone meta tags (safe-area, `viewport-fit=cover`) in [index.html](index.html) and [src/index.css](src/index.css); icons in `public/` (placeholder almond-arch design)
@@ -32,7 +32,7 @@ React 19 + Vite + TypeScript (strict) + Tailwind CSS v4 + vite-plugin-pwa. Plann
 - **Day settlement is irreversible.** Once a day is settled (`day_settlements`), its payment entries lock. Enforce this in the database (constraint / RLS), not just in the UI.
 - **A payment belongs to the logged-in stylist** — there is no manual "whose client" picker. Method is cash **or** card, never mixed.
 - **Costs have three split modes:** 50/50 (auto-split, Agata owes Patrycja half), "tylko moja" (own cost only, no inter-stylist settlement and no coverage status), and "własny podział" (manual per-stylist amounts). Only modes with inter-stylist settlement carry a coverage status (niepokryty / częściowo pokryty / pokryty).
-- **Card assignment is a repayment mechanism, not income transfer.** At day settlement Agata may assign her card takings to an uncovered cost instead of handing cash to Patrycja. Assigned cards still count as Agata's revenue in the earnings formula; Patrycja confirms the assignment in-app.
+- **Card assignment is a repayment mechanism, not income transfer.** At day settlement Agata may assign her card takings to an uncovered cost instead of handing cash to Patrycja. Assigned cards still count as Agata's revenue in the earnings formula; the assignment is final — no separate confirmation step (Patrycja just sees it in-app).
 - **Cost date is when the cost occurred**, not when it was entered — retroactive entry is allowed.
 - **Either stylist can settle the day alone**; both see all data — nothing is hidden per-user.
 - Offline: cached reads only; writes require a connection (deliberate — avoids sync conflicts).
@@ -52,3 +52,5 @@ Hard constraints:
  - "Kwoty zawsze w groszach jako integer, nigdy float"
 - "Wpisy z locked=true są nieedytowalne — egzekwowane w bazie"
 - "Mobile first, testuj na viewport iPhone"
+
+WAŻNE! W razie wszelkich wątpliwości zawsze zadawaj pytania!
