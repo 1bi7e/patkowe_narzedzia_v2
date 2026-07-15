@@ -5,3 +5,8 @@ dev-dist
 *.local
 *.tsbuildinfo
 .env
+
+# Materiały projektowe i notatki trzymane lokalnie, poza gitem (patrz CLAUDE.md)
+aplikacja-design/
+aplikacja-salon-specyfikacja.md
+notatki/
