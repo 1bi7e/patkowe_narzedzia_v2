@@ -298,3 +298,148 @@ begin
   raise exception 'SMOKE_TEST_ROLLBACK: wszystkie testy RLS przeszły — dane testowe wycofane';
 end;
 $$;
+
+-- ----------------------------------------------------------------------------
+-- Blok 3: rozliczanie wielu dni naraz (rozlicz_dni) — atomowość i limity
+-- (działa jako właściciel tabel — jak Blok 1)
+--
+-- Dni testowe w roku 2002. Dzień A = 2002-02-05, B = 2002-02-06, C = 2002-02-07.
+-- Łączne karty Agaty z A+B = 20000 + 30000 = 50000 gr (podstawa limitu przypisań).
+-- ----------------------------------------------------------------------------
+
+do $$
+declare
+  v_cost_5050  uuid;
+  v_sett_b     uuid;
+  v_ids        uuid[];
+  v_id         uuid;
+  v_status     text;
+  v_pokryte    integer;
+  v_data       date;
+  v_ile        integer;
+begin
+  -- ── Dane testowe ──────────────────────────────────────────────────────────
+  insert into payments (klientka, kwota_grosze, metoda, stylistka, data) values
+    ('TEST MD A-pat-card', 10000, 'card', 'patrycja', timestamptz '2002-02-05 10:00+01'),
+    ('TEST MD A-aga-card', 20000, 'card', 'agata',    timestamptz '2002-02-05 11:00+01'),
+    ('TEST MD A-aga-cash',  5000, 'cash', 'agata',    timestamptz '2002-02-05 12:00+01'),
+    ('TEST MD B-aga-card', 30000, 'card', 'agata',    timestamptz '2002-02-06 11:00+01'),
+    ('TEST MD B-pat-cash',  4000, 'cash', 'patrycja', timestamptz '2002-02-06 12:00+01'),
+    ('TEST MD C-pat-card',  8000, 'card', 'patrycja', timestamptz '2002-02-07 10:00+01');
+
+  insert into costs (nazwa, kwota_grosze, tryb, kwota_patrycja_grosze, kwota_agata_grosze, data, stylistka_dodajaca)
+  values ('TEST MD czynsz', 100000, 'fifty_fifty', 50000, 50000, date '2002-02-01', 'patrycja')
+  returning id into v_cost_5050;
+
+  -- ── M1. Atomowość: błędne sumy dnia B wycofują cały batch (dzień A też) ────
+  begin
+    v_ids := rozlicz_dni(
+      array[date '2002-02-05', date '2002-02-06'],
+      'agata',
+      jsonb_build_array(
+        jsonb_build_object('data', '2002-02-05', 'patrycja_grosze', 10000, 'agata_grosze', 20000),
+        jsonb_build_object('data', '2002-02-06', 'patrycja_grosze', 0,     'agata_grosze', 99999)  -- błąd
+      ),
+      '[]'::jsonb
+    );
+    raise exception 'FAIL: batch z błędną sumą dnia B przeszedł';
+  exception when others then
+    if sqlerrm like 'FAIL:%' then raise; end if;
+    raise notice 'OK (M1): batch z błędnym dniem odrzucony — %', sqlerrm;
+  end;
+  select count(*) into v_ile from payments where warsaw_date(data) = date '2002-02-05' and locked;
+  if v_ile > 0 then
+    raise exception 'FAIL: dzień A został zablokowany mimo rollbacku batcha (% wpisów)', v_ile;
+  end if;
+  raise notice 'OK (M1b): dzień A nietknięty po rollbacku batcha (atomowość)';
+
+  -- ── M2. Przypisanie ponad ŁĄCZNE karty Agaty (60000 > 50000) → odrzut ─────
+  begin
+    v_ids := rozlicz_dni(
+      array[date '2002-02-05', date '2002-02-06'],
+      'agata',
+      jsonb_build_array(
+        jsonb_build_object('data', '2002-02-05', 'patrycja_grosze', 10000, 'agata_grosze', 20000),
+        jsonb_build_object('data', '2002-02-06', 'patrycja_grosze', 0,     'agata_grosze', 30000)
+      ),
+      jsonb_build_array(jsonb_build_object('cost_id', v_cost_5050, 'kwota_grosze', 60000))
+    );
+    raise exception 'FAIL: przypisanie ponad łączne karty Agaty przeszło';
+  exception when others then
+    if sqlerrm like 'FAIL:%' then raise; end if;
+    raise notice 'OK (M2): przypisanie ponad agregat kart Agaty odrzucone — %', sqlerrm;
+  end;
+
+  -- ── M3. Zduplikowane dni → odrzut ─────────────────────────────────────────
+  begin
+    v_ids := rozlicz_dni(
+      array[date '2002-02-05', date '2002-02-05'],
+      'agata',
+      jsonb_build_array(
+        jsonb_build_object('data', '2002-02-05', 'patrycja_grosze', 10000, 'agata_grosze', 20000),
+        jsonb_build_object('data', '2002-02-05', 'patrycja_grosze', 10000, 'agata_grosze', 20000)
+      ),
+      '[]'::jsonb
+    );
+    raise exception 'FAIL: zduplikowane dni przeszły';
+  exception when others then
+    if sqlerrm like 'FAIL:%' then raise; end if;
+    raise notice 'OK (M3): zduplikowane dni odrzucone — %', sqlerrm;
+  end;
+
+  -- ── M4. Poprawne rozliczenie A+B naraz + przypisanie 200 zł na czynsz ─────
+  v_ids := rozlicz_dni(
+    array[date '2002-02-05', date '2002-02-06'],
+    'agata',
+    jsonb_build_array(
+      jsonb_build_object('data', '2002-02-05', 'patrycja_grosze', 10000, 'agata_grosze', 20000),
+      jsonb_build_object('data', '2002-02-06', 'patrycja_grosze', 0,     'agata_grosze', 30000)
+    ),
+    jsonb_build_array(jsonb_build_object('cost_id', v_cost_5050, 'kwota_grosze', 20000))
+  );
+  if array_length(v_ids, 1) <> 2 then
+    raise exception 'FAIL: oczekiwano 2 rozliczeń, jest %', array_length(v_ids, 1);
+  end if;
+  raise notice 'OK (M4): dwa dni rozliczone jedną akcją (% rozliczenia)', array_length(v_ids, 1);
+
+  -- ── M5. Wszystkie wpisy A i B zablokowane; C jeszcze nie ──────────────────
+  select count(*) into v_ile
+  from payments
+  where warsaw_date(data) in (date '2002-02-05', date '2002-02-06') and not locked;
+  if v_ile > 0 then
+    raise exception 'FAIL: % wpisów z dni A/B pozostało niezablokowanych', v_ile;
+  end if;
+  select count(*) into v_ile from payments where warsaw_date(data) = date '2002-02-07' and locked;
+  if v_ile > 0 then
+    raise exception 'FAIL: dzień C zablokowany, choć nie był rozliczany';
+  end if;
+  raise notice 'OK (M5): A i B zablokowane, C nietknięty';
+
+  -- ── M6. Przypisanie wpięte w rozliczenie dnia MAX (B) i status częściowy ──
+  select id into v_sett_b from day_settlements where data = date '2002-02-06';
+  select settlement_id, data into v_id, v_data
+  from cost_payments where cost_id = v_cost_5050 and zrodlo = 'card_assignment';
+  if v_id <> v_sett_b or v_data <> date '2002-02-06' then
+    raise exception 'FAIL: przypisanie nie wpięte w rozliczenie dnia max (settlement % / data %)', v_id, v_data;
+  end if;
+  select status_pokrycia, pokryte_grosze into v_status, v_pokryte from costs_coverage where id = v_cost_5050;
+  if v_status <> 'czesciowo_pokryty' or v_pokryte <> 20000 then
+    raise exception 'FAIL: oczekiwano czesciowo_pokryty/20000, jest %/%', v_status, v_pokryte;
+  end if;
+  raise notice 'OK (M6): przypisanie w rozliczeniu dnia max; czynsz częściowo pokryty (200 zł)';
+
+  -- ── M7. rozlicz_dzien (delegacja) nadal działa dla pojedynczego dnia C ────
+  v_id := rozlicz_dzien(date '2002-02-07', 'patrycja', 8000, 0);
+  if v_id is null then
+    raise exception 'FAIL: rozlicz_dzien nie zwrócił id rozliczenia';
+  end if;
+  select count(*) into v_ile from payments where warsaw_date(data) = date '2002-02-07' and not locked;
+  if v_ile > 0 then
+    raise exception 'FAIL: dzień C nie został zablokowany przez rozlicz_dzien';
+  end if;
+  raise notice 'OK (M7): rozlicz_dzien (delegacja do rozlicz_dni) rozliczył dzień C';
+
+  -- Celowy wyjątek — wycofuje wszystkie dane testowe.
+  raise exception 'SMOKE_TEST_ROLLBACK: wszystkie testy rozlicz_dni przeszły — dane testowe wycofane';
+end;
+$$;

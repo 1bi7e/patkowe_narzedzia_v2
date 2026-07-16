@@ -1,7 +1,7 @@
 import { Icon } from './Icon'
 import type { IconName } from './Icon'
 
-export type NavTab = 'dzisiaj' | 'finanse'
+export type NavTab = 'rozliczenia' | 'finanse'
 
 type BottomNavProps = {
   active: NavTab
@@ -18,10 +18,10 @@ export function BottomNav({ active, onNavigate, onAdd }: BottomNavProps) {
       style={{ paddingBottom: 'calc(4px + env(safe-area-inset-bottom))' }}
     >
       <NavSlot
-        label="Dzisiaj"
+        label="Rozliczenia"
         icon="house"
-        active={active === 'dzisiaj'}
-        onClick={() => onNavigate?.('dzisiaj')}
+        active={active === 'rozliczenia'}
+        onClick={() => onNavigate?.('rozliczenia')}
       />
 
       <div className="flex flex-1 justify-center">

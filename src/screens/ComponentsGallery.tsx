@@ -46,7 +46,7 @@ function DemoLabel({ children }: { children: ReactNode }) {
 const ALL_TONES: BadgeTone[] = ['rose', 'gold', 'cream', 'success', 'error', 'dark']
 
 export function ComponentsGallery() {
-  const [activeTab, setActiveTab] = useState<NavTab>('dzisiaj')
+  const [activeTab, setActiveTab] = useState<NavTab>('rozliczenia')
 
   return (
     <main className="mx-auto min-h-dvh w-full max-w-md px-6 pt-12 pb-36">
@@ -244,7 +244,7 @@ export function ComponentsGallery() {
           Normalnie przypięta do dołu ekranu (widoczna niżej). Poniżej podgląd obu stanów:
         </p>
         <div className="overflow-hidden rounded-lg border border-rose-200 shadow-satin-sm">
-          <BottomNav active="dzisiaj" />
+          <BottomNav active="rozliczenia" />
         </div>
         <div className="overflow-hidden rounded-lg border border-rose-200 shadow-satin-sm">
           <BottomNav active="finanse" />

@@ -3,10 +3,11 @@ import { BottomNav, Toast } from '../components'
 import type { NavTab, ToastTone } from '../components'
 import { useStylistka } from '../context/StylistkaContext'
 import { dataWarszawa } from '../lib/dzien'
-import { useDzien } from '../lib/useDzien'
+import type { NierozliczonyDzien } from '../lib/nierozliczone'
+import { useNierozliczone } from '../lib/useNierozliczone'
 import { DodajPlatnoscSheet } from './DodajPlatnoscSheet'
-import { DzisScreen } from './DzisScreen'
-import { RozliczDzienScreen } from './RozliczDzienScreen'
+import { RozliczeniaScreen } from './RozliczeniaScreen'
+import { RozliczScreen } from './RozliczScreen'
 import type { Stylistka } from '../types'
 
 type ToastStan = { tone: ToastTone; tekst: string }
@@ -15,30 +16,31 @@ type ToastStan = { tone: ToastTone; tekst: string }
 export function AppShell() {
   const { stylistka } = useStylistka()
   const kto = stylistka as Stylistka
-  const [tab, setTab] = useState<NavTab>('dzisiaj')
+  const [tab, setTab] = useState<NavTab>('rozliczenia')
   const [dzisiaj] = useState(() => dataWarszawa())
   const [arkuszOtwarty, setArkuszOtwarty] = useState(false)
-  const [rozliczOtwarty, setRozliczOtwarty] = useState(false)
+  const [dniDoRozliczenia, setDniDoRozliczenia] = useState<NierozliczonyDzien[]>([])
   const [toast, setToast] = useState<ToastStan | null>(null)
-  const stan = useDzien(dzisiaj)
-  const rozliczony = stan.rozliczenie !== null
+  const stan = useNierozliczone(dzisiaj)
 
   const zamknijToast = useCallback(() => setToast(null), [])
   const pokazToast = useCallback((tone: ToastTone, tekst: string) => setToast({ tone, tekst }), [])
 
   function otworzArkusz() {
-    if (rozliczony) {
+    if (stan.dzisRozliczony) {
       pokazToast('error', 'Dzień jest rozliczony — nie dodasz już płatności.')
       return
     }
     setArkuszOtwarty(true)
   }
 
+  const rozliczOtwarty = dniDoRozliczenia.length > 0
+
   return (
     <>
       <main className="mx-auto min-h-dvh w-full max-w-md px-6 pt-10 pb-28">
-        {tab === 'dzisiaj' ? (
-          <DzisScreen stan={stan} onRozlicz={() => setRozliczOtwarty(true)} />
+        {tab === 'rozliczenia' ? (
+          <RozliczeniaScreen stan={stan} onRozlicz={setDniDoRozliczenia} />
         ) : (
           <FinansePlaceholder />
         )}
@@ -59,10 +61,11 @@ export function AppShell() {
       />
 
       {rozliczOtwarty && (
-        <RozliczDzienScreen
-          stan={stan}
+        <RozliczScreen
+          dni={dniDoRozliczenia}
           stylistka={kto}
-          onZamknij={() => setRozliczOtwarty(false)}
+          onOdswiez={stan.odswiez}
+          onZamknij={() => setDniDoRozliczenia([])}
           onToast={pokazToast}
         />
       )}

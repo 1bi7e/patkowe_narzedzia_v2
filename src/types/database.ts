@@ -199,6 +199,19 @@ export interface Database {
         }
         Returns: string
       }
+      /** Atomowe rozliczenie wielu dni naraz — zwraca id utworzonych rozliczeń. */
+      rozlicz_dni: {
+        Args: {
+          /** Dni do rozliczenia — niepuste, bez duplikatów. */
+          p_daty: string[]
+          p_zatwierdzila: Database['public']['Enums']['stylistka']
+          /** Sumy KART per dzień: [{ data: 'YYYY-MM-DD', patrycja_grosze: number, agata_grosze: number }, ...] — po jednym wpisie na każdy dzień z p_daty. */
+          p_sumy: Json
+          /** Tablica: [{ cost_id: uuid, kwota_grosze: liczba > 0 }, ...] — przypisania kart Agaty na koszty. */
+          p_przypisania?: Json
+        }
+        Returns: string[]
+      }
     }
     Enums: {
       stylistka: 'patrycja' | 'agata'
