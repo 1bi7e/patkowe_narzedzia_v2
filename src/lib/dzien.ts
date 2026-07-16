@@ -35,6 +35,15 @@ export function zakresDniaUTC(data: string): { od: string; do: string } {
   return { od: od.toISOString(), do: koniec.toISOString() }
 }
 
+/**
+ * Zakres UTC (ISO) obejmujący cały okres warszawski [odYMD, doYMD] (włącznie),
+ * jako półotwarty [od, do) — do zapytań po kolumnie timestamptz (np. payments.data).
+ * Składa dobę początkową i następną po dobie końcowej z `zakresDniaUTC`.
+ */
+export function zakresOkresuUTC(odYMD: string, doYMD: string): { od: string; do: string } {
+  return { od: zakresDniaUTC(odYMD).od, do: zakresDniaUTC(doYMD).do }
+}
+
 /** Nagłówek daty w polskiej konwencji, np. „ŚRODA · 15 LIPCA". */
 export function formatDzienNaglowek(data: string): string {
   const [y, m, d] = data.split('-').map(Number)

@@ -7,6 +7,7 @@ import {
   CheckCircle,
   CircleHalf,
   Coins,
+  CreditCard,
   House,
   HourglassMedium,
   LockSimple,
@@ -16,6 +17,7 @@ import {
   Plus,
   SignOut,
   User,
+  Users,
   WarningCircle,
   X,
 } from '@phosphor-icons/react'
@@ -34,6 +36,7 @@ const IKONY = {
   'check-circle': CheckCircle,
   'circle-half': CircleHalf,
   coins: Coins,
+  'credit-card': CreditCard,
   house: House,
   'hourglass-medium': HourglassMedium,
   'lock-simple': LockSimple,
@@ -43,6 +46,7 @@ const IKONY = {
   plus: Plus,
   'sign-out': SignOut,
   user: User,
+  users: Users,
   'warning-circle': WarningCircle,
   x: X,
 } satisfies Record<string, PhosphorIcon>

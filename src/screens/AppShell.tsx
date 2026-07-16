@@ -66,7 +66,11 @@ export function AppShell() {
         {tab === 'rozliczenia' ? (
           <RozliczeniaScreen stan={stan} onRozlicz={setDniDoRozliczenia} />
         ) : (
-          <FinanseScreen stan={kosztyStan} onWybierzKoszt={(k) => setWybranyKosztId(k.id)} />
+          <FinanseScreen
+            koszty={kosztyStan}
+            onWybierzKoszt={(k) => setWybranyKosztId(k.id)}
+            onDodajKoszt={() => setArkuszKoszt(true)}
+          />
         )}
       </main>
 
