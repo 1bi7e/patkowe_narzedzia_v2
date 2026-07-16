@@ -42,6 +42,19 @@ describe('zarobekNetto', () => {
     expect(z.netto).toBe(364000 + 148000)
   })
 
+  it('karta przypisana na koszt nadal wlicza się do przychodu (spłata, nie transfer)', () => {
+    // Agata bierze 200 zł kartą i przy rozliczeniu przypisuje część na wspólny
+    // koszt 300 zł (jej udział = 150 zł) zamiast oddać gotówkę Patrycji.
+    // Przypisanie to spłata długu — karta zostaje przychodem Agaty, a jej udział
+    // w koszcie i tak jest odejmowany. Kwoty przypisanej NIE odejmujemy drugi raz.
+    const platnosci = [platnosc('agata', 'card', 20000)]
+    const koszty = [koszt('fifty_fifty', 15000, 15000)] // 300 zł, udział Agaty 150 zł
+    const a = zarobekNetto(platnosci, koszty, 'agata')
+    expect(a.karty).toBe(20000) // pełna karta mimo przypisania
+    expect(a.kosztyWspolne).toBe(15000)
+    expect(a.netto).toBe(20000 - 15000) // 50 zł
+  })
+
   it('50/50 odejmuje połowę jako koszt wspólny każdej stylistce', () => {
     const koszty = [koszt('fifty_fifty', 120000, 120000)] // 2400 zł, po połowie
     const p = zarobekNetto([], koszty, 'patrycja')
