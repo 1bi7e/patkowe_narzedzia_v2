@@ -1,11 +1,15 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { BottomNav, Toast } from '../components'
 import type { NavTab, ToastTone } from '../components'
 import { useStylistka } from '../context/StylistkaContext'
 import { dataWarszawa } from '../lib/dzien'
 import type { NierozliczonyDzien } from '../lib/nierozliczone'
+import { useKoszty } from '../lib/useKoszty'
 import { useNierozliczone } from '../lib/useNierozliczone'
+import { DodajKosztSheet } from './DodajKosztSheet'
 import { DodajPlatnoscSheet } from './DodajPlatnoscSheet'
+import { FinanseScreen } from './FinanseScreen'
+import { KosztSzczegolScreen } from './KosztSzczegolScreen'
 import { RozliczeniaScreen } from './RozliczeniaScreen'
 import { RozliczScreen } from './RozliczScreen'
 import type { Stylistka } from '../types'
@@ -17,24 +21,44 @@ export function AppShell() {
   const { stylistka } = useStylistka()
   const kto = stylistka as Stylistka
   const [tab, setTab] = useState<NavTab>('rozliczenia')
-  const [dzisiaj] = useState(() => dataWarszawa())
-  const [arkuszOtwarty, setArkuszOtwarty] = useState(false)
+  // Liczone przy każdym renderze (nie zamrożone w useState): po północy warszawskiej
+  // wartość sama się aktualizuje przy następnym renderze. Że to stabilny string,
+  // subskrypcja w useNierozliczone przepina się dopiero przy realnej zmianie doby.
+  const dzisiaj = dataWarszawa()
+  const [arkuszPlatnosc, setArkuszPlatnosc] = useState(false)
+  const [arkuszKoszt, setArkuszKoszt] = useState(false)
   const [dniDoRozliczenia, setDniDoRozliczenia] = useState<NierozliczonyDzien[]>([])
+  const [wybranyKosztId, setWybranyKosztId] = useState<string | null>(null)
   const [toast, setToast] = useState<ToastStan | null>(null)
+  // Po własnym rozliczeniu wyciszamy powiadomienie o przypisaniu (to nasza akcja).
+  const wyciszDo = useRef(0)
+
   const stan = useNierozliczone(dzisiaj)
 
   const zamknijToast = useCallback(() => setToast(null), [])
   const pokazToast = useCallback((tone: ToastTone, tekst: string) => setToast({ tone, tekst }), [])
 
-  function otworzArkusz() {
+  const kosztyStan = useKoszty({
+    onPrzypisanie: () => {
+      if (Date.now() < wyciszDo.current) return
+      pokazToast('success', 'Przypisano karty na koszt — pokrycie zaktualizowane.')
+    },
+  })
+
+  function otworzPlatnosc() {
     if (stan.dzisRozliczony) {
       pokazToast('error', 'Dzień jest rozliczony — nie dodasz już płatności.')
       return
     }
-    setArkuszOtwarty(true)
+    setArkuszPlatnosc(true)
   }
 
+  const zamknijRozlicz = useCallback(() => setDniDoRozliczenia([]), [])
+
   const rozliczOtwarty = dniDoRozliczenia.length > 0
+  const wybranyKoszt = wybranyKosztId
+    ? (kosztyStan.koszty.find((k) => k.id === wybranyKosztId) ?? null)
+    : null
 
   return (
     <>
@@ -42,17 +66,22 @@ export function AppShell() {
         {tab === 'rozliczenia' ? (
           <RozliczeniaScreen stan={stan} onRozlicz={setDniDoRozliczenia} />
         ) : (
-          <FinansePlaceholder />
+          <FinanseScreen stan={kosztyStan} onWybierzKoszt={(k) => setWybranyKosztId(k.id)} />
         )}
       </main>
 
       <div className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-md">
-        <BottomNav active={tab} onNavigate={setTab} onAdd={otworzArkusz} />
+        <BottomNav
+          active={tab}
+          onNavigate={setTab}
+          onDodajPlatnosc={otworzPlatnosc}
+          onDodajKoszt={() => setArkuszKoszt(true)}
+        />
       </div>
 
       <DodajPlatnoscSheet
-        open={arkuszOtwarty}
-        onClose={() => setArkuszOtwarty(false)}
+        open={arkuszPlatnosc}
+        onClose={() => setArkuszPlatnosc(false)}
         stylistka={kto}
         onZapisano={() => {
           void stan.odswiez()
@@ -60,12 +89,36 @@ export function AppShell() {
         }}
       />
 
+      <DodajKosztSheet
+        open={arkuszKoszt}
+        onClose={() => setArkuszKoszt(false)}
+        stylistka={kto}
+        onZapisano={() => {
+          void kosztyStan.odswiez()
+          pokazToast('success', 'Zapisano koszt.')
+        }}
+      />
+
       {rozliczOtwarty && (
         <RozliczScreen
           dni={dniDoRozliczenia}
+          koszty={kosztyStan.koszty}
           stylistka={kto}
           onOdswiez={stan.odswiez}
-          onZamknij={() => setDniDoRozliczenia([])}
+          onZamknij={zamknijRozlicz}
+          onZatwierdzanie={() => {
+            // Realtime echo naszego przypisania dotrze po commicie — wycisz je na chwilę.
+            wyciszDo.current = Date.now() + 8000
+          }}
+          onToast={pokazToast}
+        />
+      )}
+
+      {wybranyKoszt && (
+        <KosztSzczegolScreen
+          koszt={wybranyKoszt}
+          onZamknij={() => setWybranyKosztId(null)}
+          onZmiana={kosztyStan.odswiez}
           onToast={pokazToast}
         />
       )}
@@ -75,15 +128,6 @@ export function AppShell() {
           {toast.tekst}
         </Toast>
       )}
-    </>
-  )
-}
-
-function FinansePlaceholder() {
-  return (
-    <>
-      <h1 className="font-serif text-h2 font-medium text-brown-800">Finanse</h1>
-      <p className="mt-16 text-center font-light text-brown-400">Wkrótce.</p>
     </>
   )
 }

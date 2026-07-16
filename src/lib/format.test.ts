@@ -26,4 +26,12 @@ describe('parseZloteNaGrosze', () => {
       expect(parseZloteNaGrosze(formatZlote(grosze))).toBe(grosze)
     }
   })
+
+  it('zeroOk: puste pole i „0" znaczą 0, niepoprawny tekst nadal null', () => {
+    expect(parseZloteNaGrosze('', { zeroOk: true })).toBe(0)
+    expect(parseZloteNaGrosze('0', { zeroOk: true })).toBe(0)
+    expect(parseZloteNaGrosze('0,00', { zeroOk: true })).toBe(0)
+    expect(parseZloteNaGrosze('150', { zeroOk: true })).toBe(15000)
+    expect(parseZloteNaGrosze('abc', { zeroOk: true })).toBeNull()
+  })
 })

@@ -15,16 +15,29 @@ export function formatZlote(grosze: Grosze): string {
   }).format(grosze / 100)
 }
 
+/** Opcje parsowania kwoty. */
+type OpcjeParsowania = {
+  /**
+   * Gdy true — puste pole oraz „0" znaczą 0 groszy (nie null). Do pól, w których
+   * zero jest poprawne i oznacza „nic" (opcjonalna część podziału, przypisanie
+   * kart). Domyślnie false: zero i pusty tekst są niepoprawne (główne pole kwoty).
+   */
+  zeroOk?: boolean
+}
+
 /**
  * Parsuje kwotę w złotych z pola tekstowego na grosze (integer). Akceptuje
  * przecinek i kropkę dziesiętną oraz spacje jako separator tysięcy; maksymalnie
- * dwa miejsca po przecinku. Zwraca null dla wejść niepoprawnych lub ≤ 0.
- * Liczymy na całkowitych (bez floata) — grosze zawsze muszą się bilansować.
+ * dwa miejsca po przecinku. Zwraca null dla wejść niepoprawnych lub — bez
+ * `zeroOk` — dla ≤ 0. Liczymy na całkowitych (bez floata) — grosze zawsze muszą
+ * się bilansować.
  */
-export function parseZloteNaGrosze(tekst: string): Grosze | null {
+export function parseZloteNaGrosze(tekst: string, opcje: OpcjeParsowania = {}): Grosze | null {
   const oczyszczony = tekst.trim().replace(/\s/g, '').replace(',', '.')
+  if (oczyszczony === '') return opcje.zeroOk ? 0 : null
   if (!/^\d+(\.\d{1,2})?$/.test(oczyszczony)) return null
   const [calosc, ulamek = ''] = oczyszczony.split('.')
   const grosze = Number(calosc) * 100 + Number((ulamek + '00').slice(0, 2))
-  return grosze > 0 ? grosze : null
+  if (grosze > 0) return grosze
+  return opcje.zeroOk ? 0 : null
 }

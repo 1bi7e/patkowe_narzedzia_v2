@@ -3,6 +3,7 @@ import { Badge } from './Badge'
 import { Icon } from './Icon'
 import { StatusBadge } from './StatusBadge'
 import { formatZlote } from '../lib/format'
+import { TRYB_LABEL } from '../lib/koszty'
 import type {
   Grosze,
   MetodaPlatnosci,
@@ -80,12 +81,6 @@ function PaymentEntry({ stylistka, klient, metoda, grosze, locked = false, onEdi
       )}
     </div>
   )
-}
-
-const TRYB_LABEL: Record<TrybPodzialu, string> = {
-  fifty_fifty: '50/50',
-  custom: 'własny',
-  only_mine: 'tylko moja',
 }
 
 function CostEntry({ nazwa, grosze, tryb, status, pokryteGrosze, caloscGrosze }: CostProps) {

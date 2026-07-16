@@ -22,7 +22,7 @@ type RozliczeniaScreenProps = {
 export function RozliczeniaScreen({ stan, onRozlicz }: RozliczeniaScreenProps) {
   const { stylistka, wyloguj } = useStylistka()
   const kto = stylistka as Stylistka
-  const { dzis, dni, ladowanie, blad } = stan
+  const { dzis, dni, dzisRozliczony, ladowanie, blad } = stan
   const [zazn, setZazn] = useState<Set<string>>(new Set())
   const wieleDni = dni.length >= 2
 
@@ -57,7 +57,9 @@ export function RozliczeniaScreen({ stan, onRozlicz }: RozliczeniaScreenProps) {
         <p className="mt-10 py-8 text-center font-light text-brown-400">Wczytuję…</p>
       ) : dni.length === 0 ? (
         <p className="mt-10 py-8 text-center font-light text-brown-400">
-          Nic do rozliczenia — dodaj płatność przyciskiem&nbsp;+.
+          {dzisRozliczony
+            ? 'Dzień rozliczony — wpisy zablokowane.'
+            : 'Nic do rozliczenia — dodaj płatność przyciskiem +.'}
         </p>
       ) : (
         <div className="mt-7 flex flex-col gap-8">
