@@ -50,7 +50,13 @@ export function FinanseHistoria({ platnosci, koszty, ladowanie, blad }: FinanseH
     return [...mapa.entries()]
       .sort(([a], [b]) => (a < b ? 1 : a > b ? -1 : 0)) // dni malejąco
       .map(([dzien, wpisy]) => {
-        wpisy.sort((x, y) => (x.sort < y.sort ? 1 : x.sort > y.sort ? -1 : 0)) // w dniu malejąco
+        // W obrębie dnia: najpierw płatności, potem koszty. Nie porównujemy
+        // heterogenicznych znaczników (płatność = data zdarzenia, koszt =
+        // czas wpisu) — każdy rodzaj sortujemy jego własnym `sort` malejąco.
+        wpisy.sort((x, y) => {
+          if (x.rodzaj !== y.rodzaj) return x.rodzaj === 'platnosc' ? -1 : 1
+          return x.sort < y.sort ? 1 : x.sort > y.sort ? -1 : 0
+        })
         const platnosciDnia = wpisy.filter((w) => w.rodzaj === 'platnosc')
         const etykieta: Grupa['etykieta'] =
           platnosciDnia.length === 0

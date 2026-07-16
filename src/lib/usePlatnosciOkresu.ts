@@ -12,37 +12,50 @@ export type StanPlatnosciOkresu = {
   odswiez: () => Promise<void>
 }
 
+/** Rozmiar strony = limit `max_rows` Supabase; szersze okresy pobieramy stronami. */
+const STRONA = 1000
+
 /**
  * Wczytuje WSZYSTKIE płatności z danego okresu (locked i nie — inaczej niż
  * useNierozliczone) i subskrybuje realtime na `payments`. Zapytanie po zakresie
- * UTC odpowiadającym dobie warszawskiej okresu (kolumna `data` to timestamptz);
- * dzięki temu mieści się w limicie `max_rows` Supabase. Re-query przy zmianie okresu.
+ * UTC odpowiadającym dobie warszawskiej okresu (kolumna `data` to timestamptz).
+ * Paginuje przez `.range`, bo Supabase tnie odpowiedź do `max_rows` — inaczej
+ * zakres „Własny" na wiele miesięcy zostałby po cichu ucięty. Gdy `wlaczony`
+ * jest `false` (np. pod-zakładka Koszty) nie pobiera i nie subskrybuje.
  */
-export function usePlatnosciOkresu(okres: Okres): StanPlatnosciOkresu {
+export function usePlatnosciOkresu(okres: Okres, wlaczony = true): StanPlatnosciOkresu {
   const [platnosci, setPlatnosci] = useState<Payment[]>([])
   const [ladowanie, setLadowanie] = useState(true)
   const [blad, setBlad] = useState<string | null>(null)
 
   const odswiez = useCallback(async () => {
     const zakres = zakresOkresuUTC(okres.od, okres.do)
-    const { data, error } = await supabase
-      .from('payments')
-      .select('*')
-      .gte('data', zakres.od)
-      .lt('data', zakres.do)
-      .order('data', { ascending: true })
+    const zebrane: Payment[] = []
+    for (let od = 0; ; od += STRONA) {
+      const { data, error } = await supabase
+        .from('payments')
+        .select('*')
+        .gte('data', zakres.od)
+        .lt('data', zakres.do)
+        .order('data', { ascending: true })
+        .range(od, od + STRONA - 1)
 
-    if (error) {
-      setBlad(error.message)
-      setLadowanie(false)
-      return
+      if (error) {
+        setBlad(error.message)
+        setLadowanie(false)
+        return
+      }
+      zebrane.push(...(data ?? []))
+      if (!data || data.length < STRONA) break
     }
-    setPlatnosci(data ?? [])
+    setPlatnosci(zebrane)
     setBlad(null)
     setLadowanie(false)
   }, [okres.od, okres.do])
 
   useEffect(() => {
+    if (!wlaczony) return
+
     setLadowanie(true)
     void odswiez()
 
@@ -56,7 +69,7 @@ export function usePlatnosciOkresu(okres: Okres): StanPlatnosciOkresu {
     return () => {
       void supabase.removeChannel(kanal)
     }
-  }, [odswiez])
+  }, [odswiez, wlaczony])
 
   return { platnosci, ladowanie, blad, odswiez }
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, Input, Sheet } from '../components'
+import { Awatar, Button, Input, Segment, Sheet } from '../components'
 import { parseZloteNaGrosze } from '../lib/format'
 import { IMIE_STYLISTKI } from '../lib/stylistki'
 import { supabase } from '../lib/supabase'
@@ -103,7 +103,14 @@ export function DodajPlatnoscSheet({ open, onClose, stylistka, onZapisano }: Dod
           <span className="mb-[7px] block text-[12px] font-medium uppercase tracking-[0.1em] text-brown-600">
             Metoda — zawsze jedna
           </span>
-          <SegmentMetody metoda={metoda} onChange={setMetoda} />
+          <Segment<MetodaPlatnosci>
+            wartosc={metoda}
+            onChange={setMetoda}
+            opcje={[
+              { value: 'cash', label: 'Gotówka' },
+              { value: 'card', label: 'Karta' },
+            ]}
+          />
         </div>
 
         <div>
@@ -145,51 +152,3 @@ export function DodajPlatnoscSheet({ open, onClose, stylistka, onZapisano }: Dod
   )
 }
 
-function SegmentMetody({
-  metoda,
-  onChange,
-}: {
-  metoda: MetodaPlatnosci
-  onChange: (m: MetodaPlatnosci) => void
-}) {
-  const opcje: { value: MetodaPlatnosci; label: string }[] = [
-    { value: 'cash', label: 'Gotówka' },
-    { value: 'card', label: 'Karta' },
-  ]
-  return (
-    <div className="flex w-full gap-[4px] rounded-pill bg-rose-100 p-[5px]">
-      {opcje.map((o) => {
-        const aktywna = metoda === o.value
-        return (
-          <button
-            key={o.value}
-            type="button"
-            onClick={() => onChange(o.value)}
-            className={[
-              'flex-1 rounded-pill py-[9px] text-[13.5px] font-medium uppercase tracking-[0.05em] transition-all duration-[160ms] ease-satin',
-              aktywna
-                ? 'border border-gold-300 bg-cream-25 text-brown-800 shadow-satin-sm'
-                : 'border border-transparent text-brown-500',
-            ].join(' ')}
-          >
-            {o.label}
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
-function Awatar({ stylistka }: { stylistka: Stylistka }) {
-  const isP = stylistka === 'patrycja'
-  return (
-    <span
-      className={[
-        'inline-flex h-[28px] w-[28px] items-center justify-center rounded-pill border font-serif text-[14px] italic text-brown-700',
-        isP ? 'bg-gold-100 border-gold-300' : 'bg-rose-100 border-rose-300',
-      ].join(' ')}
-    >
-      {isP ? 'P' : 'A'}
-    </span>
-  )
-}

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, Input, Sheet } from '../components'
+import { Awatar, Button, Input, Segment, Sheet } from '../components'
 import { parseZloteNaGrosze } from '../lib/format'
 import { podzialKosztu } from '../lib/koszty'
 import { IMIE_STYLISTKI } from '../lib/stylistki'
@@ -140,7 +140,15 @@ export function DodajKosztSheet({ open, onClose, stylistka, onZapisano }: DodajK
           <span className="mb-[7px] block text-[12px] font-medium uppercase tracking-[0.1em] text-brown-600">
             Podział
           </span>
-          <SegmentTrybu tryb={tryb} onChange={setTryb} />
+          <Segment<TrybPodzialu>
+            wartosc={tryb}
+            onChange={setTryb}
+            opcje={[
+              { value: 'fifty_fifty', label: '50/50' },
+              { value: 'only_mine', label: 'Tylko moja' },
+              { value: 'custom', label: 'Własny' },
+            ]}
+          />
           <p className="mt-[7px] text-[12.5px] text-brown-400">{OPIS_TRYBU[tryb]}</p>
         </div>
 
@@ -206,52 +214,3 @@ export function DodajKosztSheet({ open, onClose, stylistka, onZapisano }: DodajK
   )
 }
 
-function SegmentTrybu({
-  tryb,
-  onChange,
-}: {
-  tryb: TrybPodzialu
-  onChange: (t: TrybPodzialu) => void
-}) {
-  const opcje: { value: TrybPodzialu; label: string }[] = [
-    { value: 'fifty_fifty', label: '50/50' },
-    { value: 'only_mine', label: 'Tylko moja' },
-    { value: 'custom', label: 'Własny' },
-  ]
-  return (
-    <div className="flex w-full gap-[4px] rounded-pill bg-rose-100 p-[5px]">
-      {opcje.map((o) => {
-        const aktywna = tryb === o.value
-        return (
-          <button
-            key={o.value}
-            type="button"
-            onClick={() => onChange(o.value)}
-            className={[
-              'flex-1 rounded-pill py-[9px] text-[12px] font-medium uppercase tracking-[0.03em] transition-all duration-[160ms] ease-satin',
-              aktywna
-                ? 'border border-gold-300 bg-cream-25 text-brown-800 shadow-satin-sm'
-                : 'border border-transparent text-brown-500',
-            ].join(' ')}
-          >
-            {o.label}
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
-function Awatar({ stylistka }: { stylistka: Stylistka }) {
-  const isP = stylistka === 'patrycja'
-  return (
-    <span
-      className={[
-        'inline-flex h-[28px] w-[28px] items-center justify-center rounded-pill border font-serif text-[14px] italic text-brown-700',
-        isP ? 'bg-gold-100 border-gold-300' : 'bg-rose-100 border-rose-300',
-      ].join(' ')}
-    >
-      {isP ? 'P' : 'A'}
-    </span>
-  )
-}

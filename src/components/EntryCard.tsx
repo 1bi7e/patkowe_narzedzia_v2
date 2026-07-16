@@ -1,4 +1,5 @@
 import { AmountDisplay } from './AmountDisplay'
+import { Awatar } from './Awatar'
 import { Badge } from './Badge'
 import { Icon } from './Icon'
 import { StatusBadge } from './StatusBadge'
@@ -14,22 +15,6 @@ import type {
 
 /** Wspólna oprawa karty: kremowa powierzchnia, różowe obramowanie, złoty cień. */
 const CARD = 'bg-cream-25 border border-rose-200 rounded-md shadow-satin-sm'
-
-/** Awatar stylistki: P — złoto, A — róż; inicjał kursywą w Cormorant. */
-function Avatar({ stylistka, size = 28 }: { stylistka: Stylistka; size?: number }) {
-  const isP = stylistka === 'patrycja'
-  return (
-    <span
-      className={[
-        'inline-flex shrink-0 items-center justify-center rounded-pill font-serif italic text-brown-700',
-        isP ? 'bg-gold-100 border border-gold-300' : 'bg-rose-100 border border-rose-300',
-      ].join(' ')}
-      style={{ width: size, height: size, fontSize: Math.round(size * 0.5) }}
-    >
-      {isP ? 'P' : 'A'}
-    </span>
-  )
-}
 
 type PaymentProps = {
   variant: 'payment'
@@ -68,7 +53,7 @@ function PaymentEntry({ stylistka, klient, metoda, grosze, locked = false, onEdi
         locked ? 'opacity-[0.55]' : '',
       ].join(' ')}
     >
-      <Avatar stylistka={stylistka} />
+      <Awatar stylistka={stylistka} />
       <span className="flex-1 text-[15px]">{klient}</span>
       <Badge tone={naKarte ? 'rose' : 'gold'}>{naKarte ? 'karta' : 'gotówka'}</Badge>
       <span className="min-w-[64px] text-right text-[15px] font-medium">{formatZlote(grosze)} zł</span>

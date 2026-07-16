@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Chip, Input, KontoPill } from '../components'
+import { Chip, Input, KontoPill, Segment } from '../components'
 import { useStylistka } from '../context/StylistkaContext'
 import { dataWarszawa } from '../lib/dzien'
 import { czyWZakresie, miesiacOkres, nazwaOkresu, wlasnyOkres, type Okres } from '../lib/okres'
@@ -30,13 +30,14 @@ export function FinanseScreen({ koszty, onWybierzKoszt, onDodajKoszt }: FinanseS
   const [podTab, setPodTab] = useState<PodTab>('podsumowanie')
   const [okres, setOkres] = useState<Okres>(() => miesiacOkres(dzis, 0))
 
-  const platnosciStan = usePlatnosciOkresu(okres)
+  const zOkresem = podTab !== 'koszty' // Koszty pokazują wszystkie, bez filtra okresu
+
+  // Płatności ładujemy tylko na zakładkach z okresem (Podsumowanie/Historia).
+  const platnosciStan = usePlatnosciOkresu(okres, zOkresem)
   const kosztyOkresu = useMemo(
     () => koszty.koszty.filter((k) => czyWZakresie(k.data, okres)),
     [koszty.koszty, okres],
   )
-
-  const zOkresem = podTab !== 'koszty' // Koszty pokazują wszystkie, bez filtra okresu
 
   return (
     <>
@@ -53,7 +54,16 @@ export function FinanseScreen({ koszty, onWybierzKoszt, onDodajKoszt }: FinanseS
       </header>
 
       <div className="mt-6">
-        <SubZakladki aktywna={podTab} onZmiana={setPodTab} />
+        <Segment<PodTab>
+          wariant="zloto"
+          wartosc={podTab}
+          onChange={setPodTab}
+          opcje={[
+            { value: 'podsumowanie', label: 'Podsumowanie' },
+            { value: 'koszty', label: 'Koszty' },
+            { value: 'historia', label: 'Historia' },
+          ]}
+        />
       </div>
 
       {zOkresem && (
@@ -89,36 +99,6 @@ export function FinanseScreen({ koszty, onWybierzKoszt, onDodajKoszt }: FinanseS
         )}
       </div>
     </>
-  )
-}
-
-function SubZakladki({ aktywna, onZmiana }: { aktywna: PodTab; onZmiana: (t: PodTab) => void }) {
-  const opcje: { value: PodTab; label: string }[] = [
-    { value: 'podsumowanie', label: 'Podsumowanie' },
-    { value: 'koszty', label: 'Koszty' },
-    { value: 'historia', label: 'Historia' },
-  ]
-  return (
-    <div className="flex w-full gap-[4px] rounded-pill bg-rose-100 p-[5px]">
-      {opcje.map((o) => {
-        const akt = aktywna === o.value
-        return (
-          <button
-            key={o.value}
-            type="button"
-            onClick={() => onZmiana(o.value)}
-            className={[
-              'flex-1 rounded-pill py-[9px] text-[12px] font-medium uppercase tracking-[0.03em] transition-all duration-[160ms] ease-satin',
-              akt
-                ? 'bg-[image:var(--gradient-satin-gold)] text-brown-800 shadow-satin-sm'
-                : 'text-brown-500',
-            ].join(' ')}
-          >
-            {o.label}
-          </button>
-        )
-      })}
-    </div>
   )
 }
 
