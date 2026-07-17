@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Awatar, Button, Input, Segment, Sheet } from '../components'
-import { formatZlote, parseZloteNaGrosze } from '../lib/format'
+import { groszeNaPole, parseZloteNaGrosze } from '../lib/format'
 import { IMIE_STYLISTKI } from '../lib/stylistki'
 import { supabase } from '../lib/supabase'
 import { useOnline } from '../lib/useOnline'
@@ -30,11 +30,6 @@ function terazLokalnie(): string {
 function dataNaPoleLokalne(d: Date): string {
   const p = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
-}
-
-/** Grosze → wartość edytowalna w polu kwoty (bez separatora tysięcy, przecinek). */
-function groszeNaPole(grosze: number): string {
-  return formatZlote(grosze).replace(/\s/g, '')
 }
 
 /**

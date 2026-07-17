@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatZlote, parseZloteNaGrosze } from './format'
+import { formatZlote, groszeNaPole, parseZloteNaGrosze } from './format'
 
 describe('parseZloteNaGrosze', () => {
   it('parsuje liczby całkowite (ze spacją tysięcy)', () => {
@@ -33,5 +33,23 @@ describe('parseZloteNaGrosze', () => {
     expect(parseZloteNaGrosze('0,00', { zeroOk: true })).toBe(0)
     expect(parseZloteNaGrosze('150', { zeroOk: true })).toBe(15000)
     expect(parseZloteNaGrosze('abc', { zeroOk: true })).toBeNull()
+  })
+})
+
+describe('groszeNaPole', () => {
+  it('zdejmuje separator tysięcy, zostawia przecinek dziesiętny', () => {
+    expect(groszeNaPole(120000)).toBe('1200')
+    expect(groszeNaPole(150050)).toBe('1500,50')
+    expect(groszeNaPole(52000)).toBe('520')
+    expect(groszeNaPole(0)).toBe('0')
+  })
+
+  // Przypina założenie prefillu kwoty przypisania w RozliczScreen: to, co wstawimy
+  // do pola, musi wrócić tą samą liczbą groszy. Chroni przed zmianą separatora
+  // pl-PL w przyszłym CLDR (dziś NBSP; `\s` łapie też U+202F, ale test to pilnuje).
+  it('round-trip przez parseZloteNaGrosze zachowuje grosze', () => {
+    for (const grosze of [0, 5, 99, 52000, 120000, 150050, 999999, 100000000]) {
+      expect(parseZloteNaGrosze(groszeNaPole(grosze), { zeroOk: true })).toBe(grosze)
+    }
   })
 })

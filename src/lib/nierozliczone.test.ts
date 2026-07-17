@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { grupujNierozliczone, sumaDniaZPodsumowania } from './nierozliczone'
+import { grupujNierozliczone, maksPrzypisania, sumaDniaZPodsumowania } from './nierozliczone'
 import { podsumujDzien } from './sumy'
-import type { MetodaPlatnosci, Payment, Stylistka } from '../types'
+import type { CostCoverage, MetodaPlatnosci, Payment, Stylistka } from '../types'
 
 function platnosc(
   data: string,
@@ -82,5 +82,65 @@ describe('sumaDniaZPodsumowania', () => {
       patrycja_grosze: 34000,
       agata_grosze: 52000,
     })
+  })
+})
+
+function koszt(id: string, pozostalo_grosze: number | null): CostCoverage {
+  return {
+    id,
+    nazwa: `Koszt ${id}`,
+    kwota_grosze: 240000,
+    // pozostalo_grosze = null odwzorowuje „tylko moja" (brak rozliczenia między stylistkami).
+    tryb: pozostalo_grosze === null ? 'only_mine' : 'fifty_fifty',
+    kwota_patrycja_grosze: 120000,
+    kwota_agata_grosze: 120000,
+    data: '2026-07-15',
+    stylistka_dodajaca: 'patrycja',
+    created_at: '2026-07-15T08:00:00.000Z',
+    pokryte_grosze: pozostalo_grosze === null ? null : 120000 - pozostalo_grosze,
+    pozostalo_grosze,
+    status_pokrycia: pozostalo_grosze === null ? null : 'niepokryty',
+  }
+}
+
+describe('maksPrzypisania', () => {
+  const czynsz = koszt('czynsz', 120000)
+  const farby = koszt('farby', 14000)
+
+  it('ogranicza limitem kosztu, gdy budżet kart jest większy', () => {
+    expect(maksPrzypisania(farby, [czynsz, farby], {}, 52000)).toBe(14000)
+  })
+
+  it('ogranicza budżetem kart Agaty, gdy koszt jest większy', () => {
+    expect(maksPrzypisania(czynsz, [czynsz, farby], {}, 52000)).toBe(52000)
+  })
+
+  it('odejmuje kwoty INNYCH wybranych kosztów od budżetu', () => {
+    // 520 zł kart − 140 zł już przypisane na farby = 380 zł wolne na czynsz.
+    expect(maksPrzypisania(czynsz, [czynsz, farby], { farby: '140' }, 52000)).toBe(38000)
+  })
+
+  it('pomija własną kwotę przy liczeniu wolnego budżetu', () => {
+    // Ponowne policzenie maksa dla czynszu nie może odjąć tego, co już na nim stoi.
+    expect(maksPrzypisania(czynsz, [czynsz, farby], { czynsz: '200' }, 52000)).toBe(52000)
+  })
+
+  it('klampuje do zera, gdy inne przypisania przekraczają budżet', () => {
+    // Bez zewnętrznego max(0, …) prefill byłby ujemny → „-20" → własny parser go odrzuca.
+    expect(maksPrzypisania(czynsz, [czynsz, farby], { farby: '600' }, 52000)).toBe(0)
+  })
+
+  it('niepoprawny tekst w innym polu nie zatruwa wyniku (liczy się jak 0)', () => {
+    expect(maksPrzypisania(czynsz, [czynsz, farby], { farby: 'abc' }, 52000)).toBe(52000)
+  })
+
+  it('ignoruje osierocone kwoty kosztów spoza listy niepokrytych', () => {
+    // Koszt pokryty w międzyczasie przez Patrycję wypada z `niepokryte`, ale jego
+    // klucz może jeszcze wisieć w stanie pola — nie może zjadać budżetu.
+    expect(maksPrzypisania(czynsz, [czynsz], { farby: '140' }, 52000)).toBe(52000)
+  })
+
+  it('koszt bez pozostałego salda (null → „tylko moja") daje zero', () => {
+    expect(maksPrzypisania(koszt('moja', null), [koszt('moja', null)], {}, 52000)).toBe(0)
   })
 })

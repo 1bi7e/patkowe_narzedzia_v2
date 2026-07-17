@@ -9,8 +9,9 @@
  */
 
 import { dataWarszawa } from './dzien'
+import { parseZloteNaGrosze } from './format'
 import { podsumujDzien, type PodsumowanieDnia } from './sumy'
-import type { Grosze, Payment } from '../types'
+import type { CostCoverage, Grosze, Payment } from '../types'
 
 /** Jeden nierozliczony dzień: data (YYYY-MM-DD, strefa Warszawa), jego płatności i sumy. */
 export type NierozliczonyDzien = {
@@ -53,4 +54,28 @@ export function grupujNierozliczone(platnosci: Payment[]): NierozliczonyDzien[] 
 /** Buduje wejście RPC (SumaDnia) z podsumowania dnia — bierze wyłącznie karty. */
 export function sumaDniaZPodsumowania(data: string, sumy: PodsumowanieDnia): SumaDnia {
   return { data, patrycja_grosze: sumy.patrycja.karta, agata_grosze: sumy.agata.karta }
+}
+
+/**
+ * Maksimum, jakie można przypisać na `koszt`: limit samego kosztu ∧ resztka kart
+ * Agaty po INNYCH wybranych kosztach. Służy i za prefill przy wyborze kosztu,
+ * i za hint „maks. X zł". `kwoty` to surowe teksty pól, kluczowane po cost.id —
+ * obecność klucza znaczy „koszt wybrany".
+ */
+export function maksPrzypisania(
+  koszt: CostCoverage,
+  niepokryte: CostCoverage[],
+  kwoty: Record<string, string>,
+  budzetAgaty: Grosze,
+): Grosze {
+  // Po `niepokryte`, nie po kluczach `kwoty` — pomija osierocone wpisy kosztów,
+  // które wypadły z listy po odświeżeniu. `?? 0`, nie `?? -1`: niepoprawny tekst
+  // w innym polu blokuje tamten wiersz, ale nie może zatruć tego prefillu.
+  const inne = niepokryte
+    .filter((k) => k.id !== koszt.id && k.id in kwoty)
+    .reduce((s, k) => s + Math.max(0, parseZloteNaGrosze(kwoty[k.id] ?? '', { zeroOk: true }) ?? 0), 0)
+  // Zewnętrzny max(0, …) obowiązkowy: pole jest wolnym tekstem, więc `budzetAgaty − inne`
+  // bywa ujemne (przekroczenie budżetu tylko blokuje przycisk, nie klampuje wartości).
+  // Bez tego prefill = „-20", którego własny parser nie przyjmuje.
+  return Math.max(0, Math.min(koszt.pozostalo_grosze ?? 0, budzetAgaty - inne))
 }

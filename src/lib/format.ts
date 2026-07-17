@@ -15,6 +15,16 @@ export function formatZlote(grosze: Grosze): string {
   }).format(grosze / 100)
 }
 
+/**
+ * Grosze → wartość edytowalna w polu kwoty (bez separatora tysięcy, przecinek).
+ * `parseZloteNaGrosze` przyjęłoby też surowy `formatZlote` (separator pl-PL to NBSP,
+ * a `\s` go łapie) — separator zdejmujemy dla UX: w polu tekstowym jest niewidzialny,
+ * ale realny przy backspace i wychodzi na zewnątrz przy kopiowaniu.
+ */
+export function groszeNaPole(grosze: Grosze): string {
+  return formatZlote(grosze).replace(/\s/g, '')
+}
+
 /** Opcje parsowania kwoty. */
 type OpcjeParsowania = {
   /**
