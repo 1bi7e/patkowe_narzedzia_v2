@@ -23,6 +23,15 @@ Tests are Vitest, colocated as `src/**/*.test.ts` (pure logic only — no jsdom)
 
 React 19 + Vite + TypeScript (strict) + Tailwind CSS v4 + vite-plugin-pwa + Supabase (PostgreSQL + Realtime; schema in `supabase/migrations/`, typed client in [src/lib/supabase.ts](src/lib/supabase.ts), env vars per [.env.example](.env.example)). Hosted on **Vercel** (`patkowe-narzedzia-v2.vercel.app`, deployed from GitHub `main`; the repo is deliberately public).
 
+## Environments — work on `dev`, not `main`
+
+The app is **live in production**. Ongoing development happens on the **`dev` branch**, never directly on `main`. Two isolated environments, split by Vercel env-var target (values are baked into the bundle at build time, so each env builds against a different database — no code change):
+- **`main` → Vercel Production → production Supabase project.** Real salon data. Only merge to `main` when a change is ready to ship.
+- **`dev` (and any other branch/PR) → Vercel Preview → separate free „staging" Supabase project.** A safe sandbox — test everything here, including the **irreversible day settlement**. Preview URL: `patkowe-narzedzia-v2-git-dev-1bi7es-projects.vercel.app`. Verified isolated: the Preview bundle points at the staging project, not production.
+- **[supabase/seed.sql](supabase/seed.sql)** seeds staging with `DEMO ` rows (today's unsettled day + costs in every split mode). `supabase db reset` re-applies migrations + seed to reset the sandbox.
+- Staging mirrors production's security posture: public sign-up **disabled**, and a Supabase Auth account with the same `EMAIL_SALONU` (password may differ).
+- When adding a migration, apply it to **both** projects (staging first to test, then production on merge).
+
 **Two distinct gates — don't conflate them:**
 1. **Auth** is one shared salon account in Supabase Auth (email is the `EMAIL_SALONU` constant in [src/lib/auth.ts](src/lib/auth.ts); UI asks for the password only). This is the real security boundary: RLS admits `authenticated` only, so the publishable key baked into the bundle grants nothing on its own. Public sign-up **must stay disabled** in the Supabase dashboard — with it on, anyone could `signUp()` and become `authenticated`. Sign-out uses `scope: 'local'`; a global sign-out would log the other stylist off her own phone.
 2. **The profile picker** (Patrycja/Agata) in localStorage sits *behind* that gate and is **not** auth — it only sets whose entries these are. The `stylistka` column stays "on trust"; RLS does not distinguish the two.
