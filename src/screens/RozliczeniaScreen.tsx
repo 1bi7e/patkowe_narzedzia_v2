@@ -1,33 +1,53 @@
 import { useState } from 'react'
 import { Awatar, Button, EntryCard, Icon, KontoPill } from '../components'
+import type { ToastTone } from '../components'
 import { useStylistka } from '../context/StylistkaContext'
 import { formatDzienNaglowek } from '../lib/dzien'
 import { formatZlote } from '../lib/format'
 import type { NierozliczonyDzien } from '../lib/nierozliczone'
 import { IMIE_STYLISTKI } from '../lib/stylistki'
 import { podsumujDzien, type PodsumowanieStylistki } from '../lib/sumy'
+import { useAkcjeRozliczenia } from '../lib/useAkcjeRozliczenia'
 import type { StanRozliczen } from '../lib/useNierozliczone'
-import type { Payment, Stylistka } from '../types'
+import type { StanRozliczone } from '../lib/useRozliczone'
+import type { DaySettlement, Payment, Stylistka } from '../types'
 
 type RozliczeniaScreenProps = {
   stan: StanRozliczen
+  /** Rozliczone dni (z AppShell) — źródło kart-zadań „gotówka dla Agaty". */
+  rozliczone: StanRozliczone
   /** Otwiera zatwierdzenie rozliczenia dla podanych dni. */
   onRozlicz: (dni: NierozliczonyDzien[]) => void
   /** Otwiera arkusz edycji wybranej płatności (poprawka przed rozliczeniem). */
   onEdytujPlatnosc: (platnosc: Payment) => void
+  onToast: (tone: ToastTone, tekst: string) => void
 }
 
 /**
- * Ekran „Rozliczenia": wszystkie nierozliczone dni pogrupowane po dacie
- * (najstarszy pierwszy). Przy ≥2 dniach checkboxy pozwalają wybrać, które dni
- * rozliczyć jedną akcją; przy jednym dniu — prosty przycisk „Rozlicz dzień".
+ * Ekran „Rozliczenia" (home): wszystko, co wymaga działania. Na górze
+ * karty-zadania „gotówka dla Agaty" z rozliczeń bez przekazanej gotówki,
+ * niżej wszystkie nierozliczone dni pogrupowane po dacie (najstarszy pierwszy).
+ * Przy ≥2 dniach checkboxy pozwalają wybrać, które dni rozliczyć jedną akcją;
+ * przy jednym dniu — prosty przycisk „Rozlicz dzień".
  */
-export function RozliczeniaScreen({ stan, onRozlicz, onEdytujPlatnosc }: RozliczeniaScreenProps) {
+export function RozliczeniaScreen({
+  stan,
+  rozliczone,
+  onRozlicz,
+  onEdytujPlatnosc,
+  onToast,
+}: RozliczeniaScreenProps) {
   const { stylistka, wyloguj } = useStylistka()
   const kto = stylistka as Stylistka
   const { dzis, dni, dzisRozliczony, ladowanie, blad } = stan
   const [zazn, setZazn] = useState<Set<string>>(new Set())
   const wieleDni = dni.length >= 2
+  const akcje = useAkcjeRozliczenia({ odswiez: rozliczone.odswiez, onToast, stylistka: kto })
+
+  // Zadania: nieprzekazana gotówka z rozliczonych dni, najstarszy dług pierwszy.
+  const doOddania = rozliczone.rozliczenia
+    .filter((s) => s.gotowka_dla_agaty_grosze > 0 && !s.gotowka_oddana)
+    .sort((a, b) => (a.data < b.data ? -1 : 1))
 
   function toggle(data: string) {
     setZazn((prev) => {
@@ -53,6 +73,20 @@ export function RozliczeniaScreen({ stan, onRozlicz, onEdytujPlatnosc }: Rozlicz
       <div className="mt-4 h-px w-full bg-linear-to-r from-gold-300 to-transparent" />
 
       {blad && <p className="mt-4 text-[13px] text-error-500">Nie udało się wczytać: {blad}</p>}
+
+      {doOddania.length > 0 && (
+        <div className="mt-6 flex flex-col gap-3">
+          {doOddania.map((s) => (
+            <KartaGotowkiDoOddania
+              key={s.id}
+              settlement={s}
+              zajete={akcje.zajete.has(s.id)}
+              online={akcje.online}
+              onPrzekazana={() => void akcje.przelaczPrzekazano(s)}
+            />
+          ))}
+        </div>
+      )}
 
       {dni.length > 0 && (
         <div className="mt-6">
@@ -165,6 +199,54 @@ function GrupaDnia({
           />
         ))}
       </div>
+    </section>
+  )
+}
+
+/**
+ * Karta-zadanie: gotówka z rozliczonego dnia, której Patrycja jeszcze nie
+ * przekazała Agacie. Odhaczenie znika z home; stan (i cofnięcie odhaczenia)
+ * pozostaje na karcie rozliczenia w Historii. Złoty akcent sekcji zadań.
+ */
+function KartaGotowkiDoOddania({
+  settlement,
+  zajete,
+  online,
+  onPrzekazana,
+}: {
+  settlement: DaySettlement
+  zajete: boolean
+  online: boolean
+  onPrzekazana: () => void
+}) {
+  const s = settlement
+  return (
+    <section className="rounded-md border border-gold-300 bg-gold-100 p-[15px] shadow-satin-sm">
+      <div className="flex items-center justify-between gap-3">
+        <span className="flex items-center gap-[7px] text-[12px] font-medium uppercase tracking-[0.14em] text-gold-700">
+          <Icon name="coins" size={16} />
+          Do oddania Agacie
+        </span>
+        <span className="text-[11px] uppercase tracking-[0.1em] text-brown-400">
+          {formatDzienNaglowek(s.data)}
+        </span>
+      </div>
+
+      <p className="mt-2 font-serif text-[24px] font-medium text-brown-800 tabular-nums">
+        {formatZlote(s.gotowka_dla_agaty_grosze)} zł
+      </p>
+
+      <button
+        type="button"
+        role="checkbox"
+        aria-checked={false}
+        onClick={onPrzekazana}
+        disabled={zajete || !online}
+        className="mt-3 flex w-full items-center gap-[11px] rounded-sm border border-rose-200 bg-cream-25 px-[13px] py-[11px] text-left transition-colors duration-[140ms] disabled:opacity-[0.55]"
+      >
+        <span className="flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-[7px] border border-rose-300 bg-cream-50" />
+        <span className="flex-1 text-[14px] text-brown-700">Oznacz jako przekazaną</span>
+      </button>
     </section>
   )
 }

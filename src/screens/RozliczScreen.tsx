@@ -324,8 +324,8 @@ export function RozliczScreen({ dni, koszty, stylistka, onOdswiez, onZamknij, on
         <div className="mt-6 flex items-start gap-[10px] rounded-md border border-gold-300 bg-gold-100 px-[14px] py-[12px]">
           <Icon name="lock-simple" size={18} className="mt-[2px] text-gold-700" />
           <p className="text-[13px] text-brown-700">
-            Nieodwracalne — wpisy z {wiele ? 'tych dni' : 'tego dnia'} zostaną zablokowane. Rozliczyć
-            może każda z Was, ale tylko raz.
+            Wpisy z {wiele ? 'tych dni' : 'tego dnia'} zostaną zablokowane. W razie pomyłki
+            cofniesz rozliczenie w Finansach, w Historii.
           </p>
         </div>
         {!online && <p className="mt-4 text-[13px] text-brown-500">{KOMUNIKAT_OFFLINE}</p>}

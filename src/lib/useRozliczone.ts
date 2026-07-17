@@ -13,10 +13,10 @@ export type StanRozliczone = {
 /**
  * Wczytuje rozliczone dni (day_settlements) i subskrybuje realtime tej tabeli —
  * przy każdej zmianie (nowe rozliczenie, odhaczenie gotówki, cofnięcie) odświeża
- * całość. Ładuje i subskrybuje tylko gdy `aktywna` (pod-zakładka „Rozliczone"
- * otwarta) — poza nią nie trzyma zbędnego kanału realtime.
+ * całość. Trzymany na stałe w AppShell: karmi jednocześnie karty-zadania
+ * „gotówka dla Agaty" na home i karty rozliczonych dni w Historii.
  */
-export function useRozliczone(aktywna: boolean): StanRozliczone {
+export function useRozliczone(): StanRozliczone {
   const [rozliczenia, setRozliczenia] = useState<DaySettlement[]>([])
   const [ladowanie, setLadowanie] = useState(true)
   const [blad, setBlad] = useState<string | null>(null)
@@ -38,7 +38,6 @@ export function useRozliczone(aktywna: boolean): StanRozliczone {
   }, [])
 
   useEffect(() => {
-    if (!aktywna) return
     setLadowanie(true)
     void odswiez()
 
@@ -52,7 +51,7 @@ export function useRozliczone(aktywna: boolean): StanRozliczone {
     return () => {
       void supabase.removeChannel(kanal)
     }
-  }, [aktywna, odswiez])
+  }, [odswiez])
 
   return { rozliczenia, ladowanie, blad, odswiez }
 }

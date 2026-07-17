@@ -7,6 +7,7 @@ import type { NierozliczonyDzien } from '../lib/nierozliczone'
 import { useKoszty } from '../lib/useKoszty'
 import { useNierozliczone } from '../lib/useNierozliczone'
 import { useOnline } from '../lib/useOnline'
+import { useRozliczone } from '../lib/useRozliczone'
 import { DodajKosztSheet } from './DodajKosztSheet'
 import { DodajPlatnoscSheet } from './DodajPlatnoscSheet'
 import { FinanseScreen } from './FinanseScreen'
@@ -37,6 +38,7 @@ export function AppShell() {
   const wyciszDo = useRef(0)
 
   const stan = useNierozliczone(dzisiaj)
+  const rozliczoneStan = useRozliczone()
 
   const zamknijToast = useCallback(() => setToast(null), [])
   const pokazToast = useCallback((tone: ToastTone, tekst: string) => setToast({ tone, tekst }), [])
@@ -79,12 +81,15 @@ export function AppShell() {
         {tab === 'rozliczenia' ? (
           <RozliczeniaScreen
             stan={stan}
+            rozliczone={rozliczoneStan}
             onRozlicz={setDniDoRozliczenia}
             onEdytujPlatnosc={setEdytowanaPlatnosc}
+            onToast={pokazToast}
           />
         ) : (
           <FinanseScreen
             koszty={kosztyStan}
+            rozliczone={rozliczoneStan}
             onWybierzKoszt={(k) => setWybranyKosztId(k.id)}
             onDodajKoszt={() => setArkuszKoszt(true)}
             onEdytujPlatnosc={setEdytowanaPlatnosc}
