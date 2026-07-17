@@ -10,6 +10,9 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['apple-touch-icon.png', 'favicon.ico', 'favicon.svg', 'favicon-96x96.png'],
+      // Ekrany startowe iPhone'a generowane z pwa-assets.config.ts (tylko splash);
+      // ikony/manifest zostawiamy własne (overrideManifestIcons domyślnie false).
+      pwaAssets: { config: true },
       manifest: {
         name: 'Salon',
         short_name: 'Salon',
@@ -29,6 +32,18 @@ export default defineConfig({
       workbox: {
         // Fonty z Google Fonts muszą działać offline (odczyt z cache wg specyfikacji)
         runtimeCaching: [
+          {
+            // Odczyty z Supabase REST — po zimnym starcie bez sieci widać ostatnie
+            // dane. Workbox cache'uje tylko GET, więc zapisy i RPC (POST) pomija.
+            urlPattern: /^https:\/\/[a-z0-9-]+\.supabase\.co\/rest\/v1\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'supabase-rest',
+              networkTimeoutSeconds: 5,
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 7 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'StaleWhileRevalidate',

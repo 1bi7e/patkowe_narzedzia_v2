@@ -13,6 +13,8 @@ type FinanseHistoriaProps = {
   koszty: CostCoverage[]
   ladowanie: boolean
   blad: string | null
+  /** Edycja niezablokowanej płatności (kłódka = wpis po rozliczeniu, bez edycji). */
+  onEdytujPlatnosc: (platnosc: Payment) => void
 }
 
 type Wpis =
@@ -22,7 +24,7 @@ type Wpis =
 type Grupa = { dzien: string; wpisy: Wpis[]; etykieta: 'edytowalne' | 'rozliczono' | null }
 
 /** Pod-zakładka „Historia": zunifikowany feed płatności + kosztów z filtrami. */
-export function FinanseHistoria({ platnosci, koszty, ladowanie, blad }: FinanseHistoriaProps) {
+export function FinanseHistoria({ platnosci, koszty, ladowanie, blad, onEdytujPlatnosc }: FinanseHistoriaProps) {
   const [typ, setTyp] = useState<FiltrTypu>('wszystko')
   const [ktora, setKtora] = useState<FiltrStylistki>('obie')
 
@@ -122,6 +124,7 @@ export function FinanseHistoria({ platnosci, koszty, ladowanie, blad }: FinanseH
                       metoda={w.p.metoda}
                       grosze={w.p.kwota_grosze}
                       locked={w.p.locked}
+                      onEdit={() => onEdytujPlatnosc(w.p)}
                     />
                   ) : (
                     <WierszKoszt key={`k-${w.k.id}`} koszt={w.k} />

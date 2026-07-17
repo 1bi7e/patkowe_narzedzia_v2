@@ -19,6 +19,7 @@ import {
   User,
   Users,
   WarningCircle,
+  WifiSlash,
   X,
 } from '@phosphor-icons/react'
 import type { Icon as PhosphorIcon, IconWeight } from '@phosphor-icons/react'
@@ -48,6 +49,7 @@ const IKONY = {
   user: User,
   users: Users,
   'warning-circle': WarningCircle,
+  'wifi-slash': WifiSlash,
   x: X,
 } satisfies Record<string, PhosphorIcon>
 

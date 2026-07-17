@@ -4,7 +4,10 @@ import { parseZloteNaGrosze } from '../lib/format'
 import { podzialKosztu } from '../lib/koszty'
 import { IMIE_STYLISTKI } from '../lib/stylistki'
 import { supabase } from '../lib/supabase'
+import { useOnline } from '../lib/useOnline'
 import type { Grosze, Stylistka, TrybPodzialu } from '../types'
+
+const KOMUNIKAT_OFFLINE = 'Jesteś offline — zapis wróci z połączeniem.'
 
 type DodajKosztSheetProps = {
   open: boolean
@@ -30,6 +33,7 @@ const OPIS_TRYBU: Record<TrybPodzialu, string> = {
 
 /** Arkusz „Nowy koszt" — trzy tryby podziału; stylistka_dodajaca auto z profilu. */
 export function DodajKosztSheet({ open, onClose, stylistka, onZapisano }: DodajKosztSheetProps) {
+  const online = useOnline()
   const [nazwa, setNazwa] = useState('')
   const [kwota, setKwota] = useState('')
   const [tryb, setTryb] = useState<TrybPodzialu>('fifty_fifty')
@@ -94,6 +98,10 @@ export function DodajKosztSheet({ open, onClose, stylistka, onZapisano }: DodajK
     })
     if (!podzial.ok) {
       setBlad(podzial.blad)
+      return
+    }
+    if (!online) {
+      setBlad(KOMUNIKAT_OFFLINE)
       return
     }
 
@@ -205,8 +213,9 @@ export function DodajKosztSheet({ open, onClose, stylistka, onZapisano }: DodajK
         </div>
 
         {blad && <p className="text-[13px] text-error-500">{blad}</p>}
+        {!online && !blad && <p className="text-[13px] text-brown-500">{KOMUNIKAT_OFFLINE}</p>}
 
-        <Button variant="dark" size="lg" fullWidth disabled={zapisuje} onClick={zapisz}>
+        <Button variant="dark" size="lg" fullWidth disabled={zapisuje || !online} onClick={zapisz}>
           {zapisuje ? 'Zapisuję…' : 'Zapisz koszt'}
         </Button>
       </div>

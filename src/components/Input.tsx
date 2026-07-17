@@ -35,7 +35,8 @@ export function Input({ label, hint, error, icon, type = 'text', placeholder, ro
     borderRadius: rows ? 16 : 999,
     padding: rows ? '14px 18px' : icon ? '12px 18px 12px 46px' : '12px 20px',
     fontFamily: 'var(--font-sans)',
-    fontSize: 15,
+    // ≥ 16px — poniżej iOS Safari zoomuje przy focusie na polu.
+    fontSize: 16,
     color: 'var(--color-brown-800)',
     outline: 'none',
     boxShadow: focus ? 'var(--ring-gold)' : 'none',

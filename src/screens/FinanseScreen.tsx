@@ -8,7 +8,7 @@ import { usePlatnosciOkresu } from '../lib/usePlatnosciOkresu'
 import { FinanseHistoria } from './FinanseHistoria'
 import { FinanseKoszty } from './FinanseKoszty'
 import { FinansePodsumowanie } from './FinansePodsumowanie'
-import type { CostCoverage, Stylistka } from '../types'
+import type { CostCoverage, Payment, Stylistka } from '../types'
 
 type PodTab = 'podsumowanie' | 'koszty' | 'historia'
 
@@ -16,6 +16,8 @@ type FinanseScreenProps = {
   koszty: StanKosztow
   onWybierzKoszt: (koszt: CostCoverage) => void
   onDodajKoszt: () => void
+  /** Otwiera arkusz edycji płatności (tylko wpisy niezablokowane). */
+  onEdytujPlatnosc: (platnosc: Payment) => void
 }
 
 /**
@@ -23,7 +25,7 @@ type FinanseScreenProps = {
  * Historia) z współdzielonym okresem. Płatności okresu ładuje `usePlatnosciOkresu`,
  * koszty przychodzą z powłoki (useKoszty) i są zawężane do okresu client-side.
  */
-export function FinanseScreen({ koszty, onWybierzKoszt, onDodajKoszt }: FinanseScreenProps) {
+export function FinanseScreen({ koszty, onWybierzKoszt, onDodajKoszt, onEdytujPlatnosc }: FinanseScreenProps) {
   const { stylistka, wyloguj } = useStylistka()
   const kto = stylistka as Stylistka
   const dzis = dataWarszawa()
@@ -95,6 +97,7 @@ export function FinanseScreen({ koszty, onWybierzKoszt, onDodajKoszt }: FinanseS
             koszty={kosztyOkresu}
             ladowanie={platnosciStan.ladowanie || koszty.ladowanie}
             blad={platnosciStan.blad ?? koszty.blad}
+            onEdytujPlatnosc={onEdytujPlatnosc}
           />
         )}
       </div>

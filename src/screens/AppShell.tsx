@@ -1,18 +1,19 @@
 import { useCallback, useRef, useState } from 'react'
-import { BottomNav, Toast } from '../components'
+import { BottomNav, Icon, Toast } from '../components'
 import type { NavTab, ToastTone } from '../components'
 import { useStylistka } from '../context/StylistkaContext'
 import { dataWarszawa } from '../lib/dzien'
 import type { NierozliczonyDzien } from '../lib/nierozliczone'
 import { useKoszty } from '../lib/useKoszty'
 import { useNierozliczone } from '../lib/useNierozliczone'
+import { useOnline } from '../lib/useOnline'
 import { DodajKosztSheet } from './DodajKosztSheet'
 import { DodajPlatnoscSheet } from './DodajPlatnoscSheet'
 import { FinanseScreen } from './FinanseScreen'
 import { KosztSzczegolScreen } from './KosztSzczegolScreen'
 import { RozliczeniaScreen } from './RozliczeniaScreen'
 import { RozliczScreen } from './RozliczScreen'
-import type { Stylistka } from '../types'
+import type { Payment, Stylistka } from '../types'
 
 type ToastStan = { tone: ToastTone; tekst: string }
 
@@ -20,12 +21,14 @@ type ToastStan = { tone: ToastTone; tekst: string }
 export function AppShell() {
   const { stylistka } = useStylistka()
   const kto = stylistka as Stylistka
+  const online = useOnline()
   const [tab, setTab] = useState<NavTab>('rozliczenia')
   // Liczone przy każdym renderze (nie zamrożone w useState): po północy warszawskiej
   // wartość sama się aktualizuje przy następnym renderze. Że to stabilny string,
   // subskrypcja w useNierozliczone przepina się dopiero przy realnej zmianie doby.
   const dzisiaj = dataWarszawa()
   const [arkuszPlatnosc, setArkuszPlatnosc] = useState(false)
+  const [edytowanaPlatnosc, setEdytowanaPlatnosc] = useState<Payment | null>(null)
   const [arkuszKoszt, setArkuszKoszt] = useState(false)
   const [dniDoRozliczenia, setDniDoRozliczenia] = useState<NierozliczonyDzien[]>([])
   const [wybranyKosztId, setWybranyKosztId] = useState<string | null>(null)
@@ -62,6 +65,16 @@ export function AppShell() {
 
   return (
     <>
+      {!online && (
+        <div
+          className="fixed inset-x-0 z-30 mx-auto flex max-w-md items-center gap-2 border-b border-gold-300 bg-gold-100 px-6 py-2 text-[12.5px] text-brown-700"
+          style={{ top: 'env(safe-area-inset-top)' }}
+        >
+          <Icon name="wifi-slash" size={16} className="shrink-0 text-gold-700" />
+          <span>Offline — widzisz zapisane dane. Nowe wpisy zapiszesz po powrocie sieci.</span>
+        </div>
+      )}
+
       <main className="mx-auto min-h-dvh w-full max-w-md px-6 pt-10 pb-28">
         {tab === 'rozliczenia' ? (
           <RozliczeniaScreen stan={stan} onRozlicz={setDniDoRozliczenia} />
@@ -70,6 +83,7 @@ export function AppShell() {
             koszty={kosztyStan}
             onWybierzKoszt={(k) => setWybranyKosztId(k.id)}
             onDodajKoszt={() => setArkuszKoszt(true)}
+            onEdytujPlatnosc={setEdytowanaPlatnosc}
           />
         )}
       </main>
@@ -84,12 +98,20 @@ export function AppShell() {
       </div>
 
       <DodajPlatnoscSheet
-        open={arkuszPlatnosc}
-        onClose={() => setArkuszPlatnosc(false)}
+        open={arkuszPlatnosc || edytowanaPlatnosc !== null}
+        onClose={() => {
+          setArkuszPlatnosc(false)
+          setEdytowanaPlatnosc(null)
+        }}
         stylistka={kto}
+        platnosc={edytowanaPlatnosc}
         onZapisano={() => {
           void stan.odswiez()
-          pokazToast('success', 'Zapisano płatność.')
+          pokazToast('success', edytowanaPlatnosc ? 'Zaktualizowano płatność.' : 'Zapisano płatność.')
+        }}
+        onUsunieto={() => {
+          void stan.odswiez()
+          pokazToast('success', 'Usunięto płatność.')
         }}
       />
 

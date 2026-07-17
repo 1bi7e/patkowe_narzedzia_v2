@@ -6,7 +6,10 @@ import { formatZlote, parseZloteNaGrosze } from '../lib/format'
 import { IMIE_STYLISTKI } from '../lib/stylistki'
 import { sumaDniaZPodsumowania, type NierozliczonyDzien, type PrzypisanieKart } from '../lib/nierozliczone'
 import { rozliczDni } from '../lib/rozliczenia'
+import { useOnline } from '../lib/useOnline'
 import type { CostCoverage, Stylistka } from '../types'
+
+const KOMUNIKAT_OFFLINE = 'Jesteś offline — rozliczenie wróci z połączeniem.'
 
 type RozliczScreenProps = {
   /** Dni do rozliczenia (≥1) — snapshot z ekranu Rozliczenia. */
@@ -29,6 +32,7 @@ type RozliczScreenProps = {
  * po zatwierdzeniu pokrycie kosztów aktualizuje się u obu stylistek (realtime).
  */
 export function RozliczScreen({ dni, koszty, stylistka, onOdswiez, onZamknij, onZatwierdzanie, onToast }: RozliczScreenProps) {
+  const online = useOnline()
   const [zatwierdzam, setZatwierdzam] = useState(false)
   const [kwotyPrzypisan, setKwotyPrzypisan] = useState<Record<string, string>>({})
   const wiele = dni.length > 1
@@ -55,9 +59,13 @@ export function RozliczScreen({ dni, koszty, stylistka, onOdswiez, onZamknij, on
   const jakisNiepoprawny = pozycje.some((p) => p.grosze < 0 || p.grosze > p.pozostalo)
   const przekroczonyBudzet = sumaPrzypisan > budzetAgaty
   const pokazPrzypisania = budzetAgaty > 0 && niepokryte.length > 0
-  const blokada = zatwierdzam || dni.length === 0 || jakisNiepoprawny || przekroczonyBudzet
+  const blokada = zatwierdzam || dni.length === 0 || jakisNiepoprawny || przekroczonyBudzet || !online
 
   async function zatwierdz() {
+    if (!online) {
+      onToast('error', KOMUNIKAT_OFFLINE)
+      return
+    }
     const przypisania: PrzypisanieKart[] = pozycje
       .filter((p) => p.grosze > 0)
       .map((p) => ({ cost_id: p.koszt.id, kwota_grosze: p.grosze }))
@@ -208,6 +216,7 @@ export function RozliczScreen({ dni, koszty, stylistka, onOdswiez, onZamknij, on
             może każda z Was, ale tylko raz.
           </p>
         </div>
+        {!online && <p className="mt-4 text-[13px] text-brown-500">{KOMUNIKAT_OFFLINE}</p>}
         <div className="mt-6">
           <Button
             variant="gold"

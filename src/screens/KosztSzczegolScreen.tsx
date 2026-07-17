@@ -5,7 +5,10 @@ import { formatZlote, parseZloteNaGrosze } from '../lib/format'
 import { pozostaloDoPokrycia, statusPokrycia, sumaZwrotow, TRYB_LABEL } from '../lib/koszty'
 import { IMIE_STYLISTKI } from '../lib/stylistki'
 import { supabase } from '../lib/supabase'
+import { useOnline } from '../lib/useOnline'
 import type { CostCoverage, CostPayment } from '../types'
+
+const KOMUNIKAT_OFFLINE = 'Jesteś offline — zapis wróci z połączeniem.'
 
 type KosztSzczegolScreenProps = {
   koszt: CostCoverage
@@ -30,6 +33,7 @@ function formatData(data: string): string {
  * zapisaniu zwrotu widok jest natychmiast spójny.
  */
 export function KosztSzczegolScreen({ koszt, onZamknij, onZmiana, onToast }: KosztSzczegolScreenProps) {
+  const online = useOnline()
   const [zwroty, setZwroty] = useState<CostPayment[]>([])
   const [ladowanie, setLadowanie] = useState(true)
   const [blad, setBlad] = useState<string | null>(null)
@@ -83,6 +87,10 @@ export function KosztSzczegolScreen({ koszt, onZamknij, onZmiana, onToast }: Kos
     }
     if (pozostalo != null && grosze > pozostalo) {
       setBladZwrotu(`Maksymalnie ${formatZlote(pozostalo)} zł do pokrycia.`)
+      return
+    }
+    if (!online) {
+      setBladZwrotu(KOMUNIKAT_OFFLINE)
       return
     }
 
@@ -206,7 +214,8 @@ export function KosztSzczegolScreen({ koszt, onZamknij, onZmiana, onToast }: Kos
             onChange={(e) => setKwotaZwrotu(e.target.value)}
           />
           {bladZwrotu && <p className="text-[13px] text-error-500">{bladZwrotu}</p>}
-          <Button variant="dark" size="lg" fullWidth disabled={zapisujeZwrot} onClick={zapiszZwrot}>
+          {!online && !bladZwrotu && <p className="text-[13px] text-brown-500">{KOMUNIKAT_OFFLINE}</p>}
+          <Button variant="dark" size="lg" fullWidth disabled={zapisujeZwrot || !online} onClick={zapiszZwrot}>
             {zapisujeZwrot ? 'Zapisuję…' : 'Zapisz zwrot'}
           </Button>
         </div>
