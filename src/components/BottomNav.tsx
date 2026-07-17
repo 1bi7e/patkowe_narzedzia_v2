@@ -43,7 +43,7 @@ export function BottomNav({ active, onNavigate, onDodajPlatnosc, onDodajKoszt }:
               onClick={() => setMenu(false)}
               className="fixed inset-0 z-10 cursor-default"
             />
-            <div className="absolute bottom-full left-1/2 z-20 mb-4 flex -translate-x-1/2 flex-col gap-[10px]">
+            <div className="absolute bottom-full left-1/2 z-20 mb-7 flex -translate-x-1/2 flex-col gap-[10px]">
               <MenuAkcja icon="user" label="Płatność" onClick={() => wybierz(onDodajPlatnosc)} />
               <MenuAkcja icon="coins" label="Koszt" onClick={() => wybierz(onDodajKoszt)} />
             </div>

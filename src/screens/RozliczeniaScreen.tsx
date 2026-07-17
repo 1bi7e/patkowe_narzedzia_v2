@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { Button, EntryCard, Icon, KontoPill } from '../components'
+import { Awatar, Button, EntryCard, Icon, KontoPill } from '../components'
 import { useStylistka } from '../context/StylistkaContext'
 import { formatDzienNaglowek } from '../lib/dzien'
 import { formatZlote } from '../lib/format'
 import type { NierozliczonyDzien } from '../lib/nierozliczone'
-import type { PodsumowanieDnia } from '../lib/sumy'
+import { IMIE_STYLISTKI } from '../lib/stylistki'
+import { podsumujDzien, type PodsumowanieStylistki } from '../lib/sumy'
 import type { StanRozliczen } from '../lib/useNierozliczone'
 import type { Payment, Stylistka } from '../types'
 
@@ -38,22 +39,26 @@ export function RozliczeniaScreen({ stan, onRozlicz, onEdytujPlatnosc }: Rozlicz
   }
 
   const wybrane = dni.filter((d) => zazn.has(d.data))
+  // Sumy zbiorcze do kafelków — ze WSZYSTKICH nierozliczonych dni łącznie.
+  const sumy = podsumujDzien(dni.flatMap((d) => d.platnosci))
 
   return (
     <>
-      <header className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-[12px] font-medium uppercase tracking-[0.18em] text-gold-600">
-            {formatDzienNaglowek(dzis)}
-          </p>
-          <h1 className="mt-1 font-serif text-h2 font-medium text-brown-800">
-            Rozliczenia<span className="italic text-rose-500">.</span>
-          </h1>
-        </div>
+      <header className="flex items-center justify-between gap-3">
+        <p className="text-[19px] font-medium uppercase tracking-[0.16em] text-gold-600">
+          Rozliczenia
+        </p>
         <KontoPill stylistka={kto} onWyloguj={wyloguj} />
       </header>
+      <div className="mt-4 h-px w-full bg-linear-to-r from-gold-300 to-transparent" />
 
       {blad && <p className="mt-4 text-[13px] text-error-500">Nie udało się wczytać: {blad}</p>}
+
+      {dni.length > 0 && (
+        <div className="mt-6">
+          <KafelkiPodsumowania sumy={sumy} kto={kto} />
+        </div>
+      )}
 
       {ladowanie && dni.length === 0 ? (
         <p className="mt-10 py-8 text-center font-light text-brown-400">Wczytuję…</p>
@@ -65,7 +70,9 @@ export function RozliczeniaScreen({ stan, onRozlicz, onEdytujPlatnosc }: Rozlicz
         </p>
       ) : (
         <div className="mt-7 flex flex-col gap-8">
-          {dni.map((d) => (
+          {/* Wyświetlanie: dzisiejszy dzień na górze, starsze niżej (model trzyma
+              rosnąco — patrz grupujNierozliczone; odwracamy tylko widok). */}
+          {[...dni].reverse().map((d) => (
             <GrupaDnia
               key={d.data}
               dzien={d}
@@ -80,31 +87,38 @@ export function RozliczeniaScreen({ stan, onRozlicz, onEdytujPlatnosc }: Rozlicz
       )}
 
       {dni.length > 0 && (
-        <div className="mt-8">
-          {wieleDni ? (
-            <Button
-              variant="gold"
-              size="lg"
-              fullWidth
-              iconRight="arrow-right"
-              disabled={wybrane.length === 0}
-              onClick={() => onRozlicz(wybrane)}
-            >
-              {wybrane.length === 0
-                ? 'Zaznacz dni do rozliczenia'
-                : `Rozlicz zaznaczone (${wybrane.length})`}
-            </Button>
-          ) : (
-            <Button
-              variant="gold"
-              size="lg"
-              fullWidth
-              iconRight="arrow-right"
-              onClick={() => onRozlicz(dni)}
-            >
-              Rozlicz dzień
-            </Button>
-          )}
+        <div
+          className="sticky z-10 mt-8 -mx-6 px-6"
+          style={{ bottom: 'calc(env(safe-area-inset-bottom) + 84px)' }}
+        >
+          {/* Maska: wiersze listy „gasną" w tło strony, wjeżdżając pod przycisk. */}
+          <div className="pointer-events-none absolute inset-x-0 -top-8 bottom-[-48px] bg-linear-to-t from-cream-50 from-65% to-transparent" />
+          <div className="relative">
+            {wieleDni ? (
+              <Button
+                variant="gold"
+                size="lg"
+                fullWidth
+                iconRight="arrow-right"
+                disabled={wybrane.length === 0}
+                onClick={() => onRozlicz(wybrane)}
+              >
+                {wybrane.length === 0
+                  ? 'Zaznacz dni do rozliczenia'
+                  : `Rozlicz zaznaczone (${wybrane.length})`}
+              </Button>
+            ) : (
+              <Button
+                variant="gold"
+                size="lg"
+                fullWidth
+                iconRight="arrow-right"
+                onClick={() => onRozlicz(dni)}
+              >
+                Rozlicz dzień
+              </Button>
+            )}
+          </div>
         </div>
       )}
     </>
@@ -137,10 +151,8 @@ function GrupaDnia({
       </div>
       <div className="mt-2 h-px w-full bg-linear-to-r from-gold-300 to-transparent" />
 
-      <SumyDnia sumy={dzien.sumy} />
-
       <div className="mt-3 flex flex-col gap-3">
-        {dzien.platnosci.map((p) => (
+        {[...dzien.platnosci].reverse().map((p) => (
           <EntryCard
             key={p.id}
             variant="payment"
@@ -157,27 +169,69 @@ function GrupaDnia({
   )
 }
 
-function SumyDnia({ sumy }: { sumy: PodsumowanieDnia }) {
+/**
+ * Dwa kafelki podsumowania (per stylistka) — sumy karta/gotówka ze wszystkich
+ * nierozliczonych dni. Zalogowana (`kto`) dostaje różowy wariant z „Ty".
+ */
+function KafelkiPodsumowania({
+  sumy,
+  kto,
+}: {
+  sumy: Record<Stylistka, PodsumowanieStylistki>
+  kto: Stylistka
+}) {
   return (
-    <dl className="mt-3 flex flex-col gap-[5px]">
-      <WierszSum etykieta="Karta" p={sumy.patrycja.karta} a={sumy.agata.karta} />
-      <WierszSum etykieta="Gotówka" p={sumy.patrycja.gotowka} a={sumy.agata.gotowka} />
-    </dl>
+    <div className="flex gap-3">
+      <KafelekStylistki stylistka="patrycja" sumy={sumy.patrycja} zalogowana={kto === 'patrycja'} />
+      <KafelekStylistki stylistka="agata" sumy={sumy.agata} zalogowana={kto === 'agata'} />
+    </div>
   )
 }
 
-function WierszSum({ etykieta, p, a }: { etykieta: string; p: number; a: number }) {
+function KafelekStylistki({
+  stylistka,
+  sumy,
+  zalogowana,
+}: {
+  stylistka: Stylistka
+  sumy: PodsumowanieStylistki
+  zalogowana: boolean
+}) {
   return (
-    <div className="flex items-baseline justify-between gap-2">
-      <dt className="text-[11px] uppercase tracking-[0.1em] text-brown-400">{etykieta}</dt>
-      <dd className="flex gap-4 text-[13px] tabular-nums text-brown-700">
-        <span>
-          <span className="text-brown-400">P</span> {formatZlote(p)} zł
-        </span>
-        <span>
-          <span className="text-brown-400">A</span> {formatZlote(a)} zł
-        </span>
-      </dd>
+    <div
+      className={[
+        'flex flex-1 flex-col gap-2 rounded-md border p-[13px_15px] shadow-satin-sm',
+        zalogowana ? 'border-rose-300 bg-rose-100' : 'border-rose-200 bg-cream-25',
+      ].join(' ')}
+    >
+      <div className="flex items-center gap-2">
+        <Awatar stylistka={stylistka} size={24} />
+        <span className="text-[15px] font-medium text-brown-800">{IMIE_STYLISTKI[stylistka]}</span>
+        {zalogowana && (
+          <span className="ml-auto text-[10px] font-medium uppercase tracking-[0.12em] text-rose-600">
+            Ty
+          </span>
+        )}
+      </div>
+      <div
+        className={[
+          'h-px w-full bg-linear-to-r to-transparent',
+          zalogowana ? 'from-rose-300' : 'from-gold-300',
+        ].join(' ')}
+      />
+      <WierszKafelka etykieta="karta" grosze={sumy.karta} />
+      <WierszKafelka etykieta="gotówka" grosze={sumy.gotowka} />
+    </div>
+  )
+}
+
+function WierszKafelka({ etykieta, grosze }: { etykieta: string; grosze: number }) {
+  return (
+    <div className="flex items-baseline justify-between">
+      <span className="text-[13px] font-light text-brown-600">{etykieta}</span>
+      <span className="text-[17px] font-medium tabular-nums text-brown-800">
+        {formatZlote(grosze)} zł
+      </span>
     </div>
   )
 }

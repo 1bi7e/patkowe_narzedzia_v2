@@ -14,8 +14,8 @@ export default defineConfig({
       // ikony/manifest zostawiamy własne (overrideManifestIcons domyślnie false).
       pwaAssets: { config: true },
       manifest: {
-        name: 'Salon',
-        short_name: 'Salon',
+        name: 'Patkowe Cudeńka',
+        short_name: 'Cudeńka',
         description: 'Rozliczenia finansowe salonu Patkowe Cudeńka',
         lang: 'pl',
         display: 'standalone',
