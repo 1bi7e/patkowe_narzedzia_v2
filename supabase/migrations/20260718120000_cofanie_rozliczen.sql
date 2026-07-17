@@ -23,11 +23,11 @@
 -- ----------------------------------------------------------------------------
 
 alter table public.day_settlements
-  add column gotowka_dla_agaty_grosze integer not null default 0
+  add column if not exists gotowka_dla_agaty_grosze integer not null default 0
     check (gotowka_dla_agaty_grosze >= 0),
-  add column gotowka_oddana        boolean not null default false,
-  add column gotowka_oddana_at     timestamptz,
-  add column gotowka_oddana_przez  public.stylistka;
+  add column if not exists gotowka_oddana        boolean not null default false,
+  add column if not exists gotowka_oddana_at     timestamptz,
+  add column if not exists gotowka_oddana_przez  public.stylistka;
 
 comment on column public.day_settlements.gotowka_dla_agaty_grosze is
   'Gotówka, którą Patrycja jest winna Agacie za ten dzień = karty Agaty − przypisania kart na koszty. Snapshot z chwili rozliczenia (przypisania są nieedytowalne, więc nie dryfuje).';
@@ -37,12 +37,19 @@ comment on column public.day_settlements.gotowka_oddana is
 -- Backfill istniejących rozliczeń: karty Agaty minus jej przypisania tego
 -- rozliczenia. greatest(0, …) chroni stare rozliczenia wielodniowe, gdzie
 -- przypisania były zlepione na dniu max (best-effort dla danych historycznych).
+--
+-- UWAGA: ten UPDATE odpala trigger nieodwracalności (na tym etapie jeszcze STARY,
+-- twardo blokujący — podmieniamy go w §3). Na bazie z istniejącymi rozliczeniami
+-- (produkcja) rzuciłby „nieodwracalne"; na pustej (staging) problem nie występował.
+-- Dlatego wyłączamy trigger wyłącznie na czas backfillu i od razu włączamy z powrotem.
+alter table public.day_settlements disable trigger trg_day_settlements_nieodwracalne;
 update public.day_settlements ds
 set gotowka_dla_agaty_grosze = greatest(0, ds.suma_kart_agata_grosze - coalesce((
   select sum(cp.kwota_grosze)
   from public.cost_payments cp
   where cp.settlement_id = ds.id and cp.zrodlo = 'card_assignment'
 ), 0));
+alter table public.day_settlements enable trigger trg_day_settlements_nieodwracalne;
 
 -- ----------------------------------------------------------------------------
 -- §2 Flaga korekty — jedyna furtka dla triggerów ochronnych
@@ -50,7 +57,7 @@ set gotowka_dla_agaty_grosze = greatest(0, ds.suma_kart_agata_grosze - coalesce(
 -- Ustawiana wyłącznie przez SECURITY DEFINER RPC (cofnij_rozliczenie,
 -- oznacz_gotowke_oddana) przez set_config(..., true) = tylko na czas transakcji.
 
-create function public.w_trakcie_korekty()
+create or replace function public.w_trakcie_korekty()
 returns boolean
 language sql
 stable
@@ -328,7 +335,7 @@ comment on function public.rozlicz_dni is
 -- Zdejmuje przypisania kart tego rozliczenia, odblokowuje płatności dnia i usuwa
 -- wiersz rozliczenia — wszystko w jednej transakcji, pod flagą korekty. Kolejność
 -- wymuszona przez FK cost_payments.settlement_id (on delete restrict).
-create function public.cofnij_rozliczenie(p_settlement_id uuid)
+create or replace function public.cofnij_rozliczenie(p_settlement_id uuid)
 returns void
 language plpgsql
 security definer
@@ -369,7 +376,7 @@ grant execute on function public.cofnij_rozliczenie(uuid) to authenticated;
 -- ----------------------------------------------------------------------------
 -- §6 RPC: odhaczenie „gotówka oddana"
 -- ----------------------------------------------------------------------------
-create function public.oznacz_gotowke_oddana(
+create or replace function public.oznacz_gotowke_oddana(
   p_settlement_id uuid,
   p_oddana boolean,
   p_przez public.stylistka
