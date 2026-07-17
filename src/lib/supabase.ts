@@ -14,10 +14,14 @@ if (!url || !publishableKey) {
 }
 
 /**
- * Współdzielony klient Supabase. Aplikacja nie używa auth Supabase —
- * „logowanie" to wybór profilu (Patrycja/Agata) w localStorage, więc
- * persistSession jest wyłączone.
+ * Współdzielony klient Supabase. Aplikacja loguje się na jedno wspólne konto
+ * salonu (patrz `lib/auth.ts`) — to jest bramka chroniąca dane, bo RLS wpuszcza
+ * wyłącznie rolę `authenticated`. Wybór profilu (Patrycja/Agata) to osobna
+ * sprawa: kontekst wpisu w localStorage, nie autoryzacja.
+ *
+ * Sesja musi przeżyć zamknięcie PWA, żeby dziewczyny podawały hasło raz na
+ * telefon — stąd persistSession i odświeżanie tokenu w tle.
  */
 export const supabase = createClient<Database>(url, publishableKey, {
-  auth: { persistSession: false },
+  auth: { persistSession: true, autoRefreshToken: true },
 })

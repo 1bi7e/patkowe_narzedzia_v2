@@ -15,9 +15,11 @@ type InputProps = {
   rows?: number
   value?: string
   onChange?: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void
+  /** Np. „current-password" — bez tego iOS nie zaproponuje zapisania hasła. */
+  autoComplete?: string
 }
 
-export function Input({ label, hint, error, icon, type = 'text', placeholder, rows, value, onChange }: InputProps) {
+export function Input({ label, hint, error, icon, type = 'text', placeholder, rows, value, onChange, autoComplete }: InputProps) {
   const [focus, setFocus] = useState(false)
   const id = useId()
 
@@ -84,6 +86,7 @@ export function Input({ label, hint, error, icon, type = 'text', placeholder, ro
             id={id}
             type={type}
             placeholder={placeholder}
+            autoComplete={autoComplete}
             value={value}
             onChange={onChange}
             onFocus={() => setFocus(true)}

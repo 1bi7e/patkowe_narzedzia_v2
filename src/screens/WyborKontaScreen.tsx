@@ -1,12 +1,17 @@
 import logo from '../assets/logo.png'
 import { Icon } from '../components'
+import { useSesja } from '../context/SesjaContext'
 import { useStylistka } from '../context/StylistkaContext'
 import { IMIE_STYLISTKI } from '../lib/stylistki'
 import type { Stylistka } from '../types'
 
-/** Ekran startowy — wybór profilu (Patrycja/Agata) zamiast logowania. */
+/**
+ * Wybór profilu (Patrycja/Agata) — już za bramką hasła salonu.
+ * To nie jest logowanie: ustawia tylko, na kogo zapisują się wpisy.
+ */
 export function WyborKontaScreen() {
   const { zaloguj } = useStylistka()
+  const { wyjdzZSalonu } = useSesja()
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col items-center px-8 py-12 text-center">
@@ -33,9 +38,18 @@ export function WyborKontaScreen() {
         </div>
 
         <p className="mt-8 max-w-[300px] text-[13px] font-light leading-relaxed text-brown-400">
-          Bez haseł — wybór ustawia tylko, na kogo zapisują się Twoje wpisy.
+          Wybór ustawia tylko, na kogo zapisują się Twoje wpisy.
         </p>
       </div>
+
+      <button
+        type="button"
+        onClick={wyjdzZSalonu}
+        className="mt-6 flex items-center gap-2 text-[12px] font-medium uppercase tracking-[0.1em] text-brown-400 transition-colors duration-[160ms] ease-satin hover:text-brown-600"
+      >
+        <Icon name="sign-out" size={14} />
+        Wyjdź z salonu
+      </button>
     </main>
   )
 }

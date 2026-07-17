@@ -21,7 +21,13 @@ Tests are Vitest, colocated as `src/**/*.test.ts` (pure logic only — no jsdom)
 
 ## Stack and code layout
 
-React 19 + Vite + TypeScript (strict) + Tailwind CSS v4 + vite-plugin-pwa + Supabase (PostgreSQL + Realtime; schema in `supabase/migrations/`, typed client in [src/lib/supabase.ts](src/lib/supabase.ts), env vars per [.env.example](.env.example)). Planned but **not yet added**: Vercel for hosting. "Login" is a profile picker (Patrycja/Agata) stored in localStorage — no passwords, it's context, not auth.
+React 19 + Vite + TypeScript (strict) + Tailwind CSS v4 + vite-plugin-pwa + Supabase (PostgreSQL + Realtime; schema in `supabase/migrations/`, typed client in [src/lib/supabase.ts](src/lib/supabase.ts), env vars per [.env.example](.env.example)). Hosted on **Vercel** (`patkowe-narzedzia-v2.vercel.app`, deployed from GitHub `main`; the repo is deliberately public).
+
+**Two distinct gates — don't conflate them:**
+1. **Auth** is one shared salon account in Supabase Auth (email is the `EMAIL_SALONU` constant in [src/lib/auth.ts](src/lib/auth.ts); UI asks for the password only). This is the real security boundary: RLS admits `authenticated` only, so the publishable key baked into the bundle grants nothing on its own. Public sign-up **must stay disabled** in the Supabase dashboard — with it on, anyone could `signUp()` and become `authenticated`. Sign-out uses `scope: 'local'`; a global sign-out would log the other stylist off her own phone.
+2. **The profile picker** (Patrycja/Agata) in localStorage sits *behind* that gate and is **not** auth — it only sets whose entries these are. The `stylistka` column stays "on trust"; RLS does not distinguish the two.
+
+„Wyloguj" on the KontoPill clears the picker only, never the session — otherwise switching stylist would cost a password. „Wyjdź z salonu" on the picker screen is the only way out of the session.
 
 - `src/screens/` — full screens (spec §Ekrany aplikacji); `src/components/` — shared UI; `src/lib/` — logic/helpers; `src/types/` — domain types
 - PWA manifest and Workbox config live in [vite.config.ts](vite.config.ts); iPhone standalone meta tags (safe-area, `viewport-fit=cover`) in [index.html](index.html) and [src/index.css](src/index.css); icons in `public/` (placeholder almond-arch design)

@@ -5,6 +5,7 @@ dev-dist
 *.local
 *.tsbuildinfo
 .env
+.playwright-mcp/
 
 # Materiały projektowe i notatki trzymane lokalnie, poza gitem (patrz CLAUDE.md)
 aplikacja-design/
