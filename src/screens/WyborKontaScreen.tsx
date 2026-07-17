@@ -1,3 +1,4 @@
+import logo from '../assets/logo.png'
 import { Icon } from '../components'
 import { useStylistka } from '../context/StylistkaContext'
 import { IMIE_STYLISTKI } from '../lib/stylistki'
@@ -10,6 +11,11 @@ export function WyborKontaScreen() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col items-center px-8 py-12 text-center">
       <div className="flex flex-1 flex-col items-center justify-center">
+        <img
+          src={logo}
+          alt="Patkowe Cudeńka"
+          className="mb-7 h-28 w-28 object-contain"
+        />
         <p className="text-[12px] font-medium uppercase tracking-[0.18em] text-gold-600">
           Salon stylizacji paznokci
         </p>
