@@ -1,5 +1,5 @@
 import logo from '../assets/logo.png'
-import { Icon } from '../components'
+import { Awatar, Icon } from '../components'
 import { useSesja } from '../context/SesjaContext'
 import { useStylistka } from '../context/StylistkaContext'
 import { IMIE_STYLISTKI } from '../lib/stylistki'
@@ -55,21 +55,13 @@ export function WyborKontaScreen() {
 }
 
 function KontoKarta({ stylistka, onClick }: { stylistka: Stylistka; onClick: () => void }) {
-  const isP = stylistka === 'patrycja'
   return (
     <button
       type="button"
       onClick={onClick}
       className="flex items-center gap-4 rounded-md border border-rose-200 bg-cream-25 px-[18px] py-4 text-left shadow-satin-sm transition-all duration-[160ms] ease-satin hover:shadow-satin active:scale-[0.98]"
     >
-      <span
-        className={[
-          'flex h-[64px] w-[56px] shrink-0 items-center justify-center rounded-arch border font-serif text-[27px] italic text-brown-700',
-          isP ? 'bg-gold-100 border-gold-300' : 'bg-rose-100 border-rose-300',
-        ].join(' ')}
-      >
-        {isP ? 'P' : 'A'}
-      </span>
+      <Awatar stylistka={stylistka} size={60} />
       <span className="flex-1">
         <span className="block font-serif text-[18px] text-brown-800">{IMIE_STYLISTKI[stylistka]}</span>
         <span className="block text-[12px] uppercase tracking-[0.1em] text-brown-400">stylistka</span>
