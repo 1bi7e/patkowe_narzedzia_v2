@@ -77,7 +77,11 @@ export function AppShell() {
 
       <main className="mx-auto min-h-dvh w-full max-w-md px-6 pt-10 pb-28">
         {tab === 'rozliczenia' ? (
-          <RozliczeniaScreen stan={stan} onRozlicz={setDniDoRozliczenia} />
+          <RozliczeniaScreen
+            stan={stan}
+            onRozlicz={setDniDoRozliczenia}
+            onEdytujPlatnosc={setEdytowanaPlatnosc}
+          />
         ) : (
           <FinanseScreen
             koszty={kosztyStan}

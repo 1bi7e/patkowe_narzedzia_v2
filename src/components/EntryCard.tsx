@@ -59,11 +59,11 @@ function PaymentEntry({ stylistka, klient, metoda, grosze, locked = false, onEdi
       <span className="min-w-[64px] text-right text-[15px] font-medium">{formatZlote(grosze)} zł</span>
       {locked ? (
         <Icon name="lock-simple" weight="fill" size={16} className="text-brown-400" />
-      ) : (
+      ) : onEdit ? (
         <button type="button" onClick={onEdit} aria-label="Edytuj płatność" className="flex">
           <Icon name="pencil-simple" size={16} className="text-brown-400" />
         </button>
-      )}
+      ) : null}
     </div>
   )
 }

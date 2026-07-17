@@ -6,12 +6,14 @@ import { formatZlote } from '../lib/format'
 import type { NierozliczonyDzien } from '../lib/nierozliczone'
 import type { PodsumowanieDnia } from '../lib/sumy'
 import type { StanRozliczen } from '../lib/useNierozliczone'
-import type { Stylistka } from '../types'
+import type { Payment, Stylistka } from '../types'
 
 type RozliczeniaScreenProps = {
   stan: StanRozliczen
   /** Otwiera zatwierdzenie rozliczenia dla podanych dni. */
   onRozlicz: (dni: NierozliczonyDzien[]) => void
+  /** Otwiera arkusz edycji wybranej płatności (poprawka przed rozliczeniem). */
+  onEdytujPlatnosc: (platnosc: Payment) => void
 }
 
 /**
@@ -19,7 +21,7 @@ type RozliczeniaScreenProps = {
  * (najstarszy pierwszy). Przy ≥2 dniach checkboxy pozwalają wybrać, które dni
  * rozliczyć jedną akcją; przy jednym dniu — prosty przycisk „Rozlicz dzień".
  */
-export function RozliczeniaScreen({ stan, onRozlicz }: RozliczeniaScreenProps) {
+export function RozliczeniaScreen({ stan, onRozlicz, onEdytujPlatnosc }: RozliczeniaScreenProps) {
   const { stylistka, wyloguj } = useStylistka()
   const kto = stylistka as Stylistka
   const { dzis, dni, dzisRozliczony, ladowanie, blad } = stan
@@ -71,6 +73,7 @@ export function RozliczeniaScreen({ stan, onRozlicz }: RozliczeniaScreenProps) {
               zaznaczalny={wieleDni}
               zaznaczony={zazn.has(d.data)}
               onToggle={() => toggle(d.data)}
+              onEdytujPlatnosc={onEdytujPlatnosc}
             />
           ))}
         </div>
@@ -114,12 +117,14 @@ function GrupaDnia({
   zaznaczalny,
   zaznaczony,
   onToggle,
+  onEdytujPlatnosc,
 }: {
   dzien: NierozliczonyDzien
   jestDzis: boolean
   zaznaczalny: boolean
   zaznaczony: boolean
   onToggle: () => void
+  onEdytujPlatnosc: (platnosc: Payment) => void
 }) {
   return (
     <section>
@@ -144,6 +149,7 @@ function GrupaDnia({
             metoda={p.metoda}
             grosze={p.kwota_grosze}
             locked={p.locked}
+            onEdit={() => onEdytujPlatnosc(p)}
           />
         ))}
       </div>
