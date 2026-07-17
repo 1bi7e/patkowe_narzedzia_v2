@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
 import {
+  ArrowCounterClockwise,
   ArrowRight,
   CaretDown,
   CaretRight,
@@ -30,6 +31,7 @@ import type { Icon as PhosphorIcon, IconWeight } from '@phosphor-icons/react'
  * tylko używane ikony (działa offline, zgodnie z wymogiem PWA).
  */
 const IKONY = {
+  'arrow-counter-clockwise': ArrowCounterClockwise,
   'arrow-right': ArrowRight,
   'caret-down': CaretDown,
   'caret-right': CaretRight,

@@ -88,6 +88,7 @@ export function AppShell() {
             onWybierzKoszt={(k) => setWybranyKosztId(k.id)}
             onDodajKoszt={() => setArkuszKoszt(true)}
             onEdytujPlatnosc={setEdytowanaPlatnosc}
+            onToast={pokazToast}
           />
         )}
       </main>

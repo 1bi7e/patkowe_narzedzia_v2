@@ -294,6 +294,22 @@ begin
   update cost_payments set kwota_grosze = 3000 where id = v_zwrot;
   raise notice 'OK (R5): anon może dodać i poprawić zwrot gotówkowy';
 
+  -- ── R6. anon woła korygujące RPC → brak uprawnień (grant tylko authenticated) ─
+  begin
+    perform cofnij_rozliczenie(gen_random_uuid());
+    raise exception 'FAIL: anon wywołał cofnij_rozliczenie';
+  exception when others then
+    if sqlerrm like 'FAIL:%' then raise; end if;
+    raise notice 'OK (R6a): anon nie może wołać cofnij_rozliczenie — %', sqlerrm;
+  end;
+  begin
+    perform oznacz_gotowke_oddana(gen_random_uuid(), true, 'patrycja');
+    raise exception 'FAIL: anon wywołał oznacz_gotowke_oddana';
+  exception when others then
+    if sqlerrm like 'FAIL:%' then raise; end if;
+    raise notice 'OK (R6b): anon nie może wołać oznacz_gotowke_oddana — %', sqlerrm;
+  end;
+
   -- Celowy wyjątek — wycofuje wszystkie dane testowe.
   raise exception 'SMOKE_TEST_ROLLBACK: wszystkie testy RLS przeszły — dane testowe wycofane';
 end;
@@ -310,7 +326,7 @@ $$;
 do $$
 declare
   v_cost_5050  uuid;
-  v_sett_b     uuid;
+  v_sett_a     uuid;
   v_ids        uuid[];
   v_id         uuid;
   v_status     text;
@@ -415,18 +431,24 @@ begin
   end if;
   raise notice 'OK (M5): A i B zablokowane, C nietknięty';
 
-  -- ── M6. Przypisanie wpięte w rozliczenie dnia MAX (B) i status częściowy ──
-  select id into v_sett_b from day_settlements where data = date '2002-02-06';
+  -- ── M6. Przypisanie wpięte w rozliczenie dnia A (najstarszy budżet) + gotówka Agaty ──
+  -- 200 zł przypisania < 200 zł kart Agaty z dnia A → cały plasterek na dniu A (nie B).
+  select id into v_sett_a from day_settlements where data = date '2002-02-05';
   select settlement_id, data into v_id, v_data
   from cost_payments where cost_id = v_cost_5050 and zrodlo = 'card_assignment';
-  if v_id <> v_sett_b or v_data <> date '2002-02-06' then
-    raise exception 'FAIL: przypisanie nie wpięte w rozliczenie dnia max (settlement % / data %)', v_id, v_data;
+  if v_id <> v_sett_a or v_data <> date '2002-02-05' then
+    raise exception 'FAIL: przypisanie nie wpięte w rozliczenie dnia A (settlement % / data %)', v_id, v_data;
   end if;
   select status_pokrycia, pokryte_grosze into v_status, v_pokryte from costs_coverage where id = v_cost_5050;
   if v_status <> 'czesciowo_pokryty' or v_pokryte <> 20000 then
     raise exception 'FAIL: oczekiwano czesciowo_pokryty/20000, jest %/%', v_status, v_pokryte;
   end if;
-  raise notice 'OK (M6): przypisanie w rozliczeniu dnia max; czynsz częściowo pokryty (200 zł)';
+  -- Gotówka do oddania Agacie: dzień A = 20000 − 20000 = 0; dzień B = 30000 − 0 = 30000.
+  select gotowka_dla_agaty_grosze into v_ile from day_settlements where data = date '2002-02-05';
+  if v_ile <> 0 then raise exception 'FAIL: gotówka Agaty dnia A oczekiwano 0, jest %', v_ile; end if;
+  select gotowka_dla_agaty_grosze into v_ile from day_settlements where data = date '2002-02-06';
+  if v_ile <> 30000 then raise exception 'FAIL: gotówka Agaty dnia B oczekiwano 30000, jest %', v_ile; end if;
+  raise notice 'OK (M6): przypisanie na dniu A (najstarszy); gotówka Agaty A=0 zł / B=300 zł';
 
   -- ── M7. rozlicz_dzien (delegacja) nadal działa dla pojedynczego dnia C ────
   v_id := rozlicz_dzien(date '2002-02-07', 'patrycja', 8000, 0);
@@ -441,5 +463,130 @@ begin
 
   -- Celowy wyjątek — wycofuje wszystkie dane testowe.
   raise exception 'SMOKE_TEST_ROLLBACK: wszystkie testy rozlicz_dni przeszły — dane testowe wycofane';
+end;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Blok 4: cofanie rozliczenia + gotówka do oddania Agacie
+-- (działa jako właściciel tabel — jak Blok 1/3)
+--
+-- Dni testowe 2003. A = 2003-03-05 (karty: Pat 100 zł, Aga 200 zł; gotówka Aga 50 zł).
+--              B = 2003-03-06 (karty: Aga 300 zł). Łączne karty Agaty A+B = 500 zł.
+-- ----------------------------------------------------------------------------
+
+do $$
+declare
+  v_cost      uuid;
+  v_sett_a    uuid;
+  v_sett_b    uuid;
+  v_ids       uuid[];
+  v_status    text;
+  v_pokryte   integer;
+  v_ile       integer;
+  v_bool      boolean;
+  v_przez     stylistka;
+begin
+  -- ── Dane testowe ──────────────────────────────────────────────────────────
+  insert into payments (klientka, kwota_grosze, metoda, stylistka, data) values
+    ('TEST CF A-pat-card', 10000, 'card', 'patrycja', timestamptz '2003-03-05 10:00+01'),
+    ('TEST CF A-aga-card', 20000, 'card', 'agata',    timestamptz '2003-03-05 11:00+01'),
+    ('TEST CF A-aga-cash',  5000, 'cash', 'agata',    timestamptz '2003-03-05 12:00+01'),
+    ('TEST CF B-aga-card', 30000, 'card', 'agata',    timestamptz '2003-03-06 11:00+01');
+
+  insert into costs (nazwa, kwota_grosze, tryb, kwota_patrycja_grosze, kwota_agata_grosze, data, stylistka_dodajaca)
+  values ('TEST CF czynsz', 100000, 'fifty_fifty', 50000, 50000, date '2003-03-01', 'patrycja')
+  returning id into v_cost;
+
+  -- ── C1. Rozliczenie A+B z przypisaniem 400 zł → plasterki A=200 zł, B=200 zł ─
+  v_ids := rozlicz_dni(
+    array[date '2003-03-05', date '2003-03-06'],
+    'agata',
+    jsonb_build_array(
+      jsonb_build_object('data','2003-03-05','patrycja_grosze',10000,'agata_grosze',20000),
+      jsonb_build_object('data','2003-03-06','patrycja_grosze',0,    'agata_grosze',30000)
+    ),
+    jsonb_build_array(jsonb_build_object('cost_id', v_cost, 'kwota_grosze', 40000))
+  );
+  select id into v_sett_a from day_settlements where data = date '2003-03-05';
+  select id into v_sett_b from day_settlements where data = date '2003-03-06';
+
+  select count(*) into v_ile from cost_payments where settlement_id = v_sett_a and zrodlo = 'card_assignment';
+  if v_ile <> 1 then raise exception 'FAIL: dzień A oczekiwano 1 plasterek przypisania, jest %', v_ile; end if;
+  select count(*) into v_ile from cost_payments where settlement_id = v_sett_b and zrodlo = 'card_assignment';
+  if v_ile <> 1 then raise exception 'FAIL: dzień B oczekiwano 1 plasterek przypisania, jest %', v_ile; end if;
+  -- Gotówka do oddania Agacie: A = 200 − 200 = 0; B = 300 − 200 = 100.
+  select gotowka_dla_agaty_grosze into v_ile from day_settlements where data = date '2003-03-05';
+  if v_ile <> 0 then raise exception 'FAIL: gotówka Agaty A oczekiwano 0, jest %', v_ile; end if;
+  select gotowka_dla_agaty_grosze into v_ile from day_settlements where data = date '2003-03-06';
+  if v_ile <> 10000 then raise exception 'FAIL: gotówka Agaty B oczekiwano 10000, jest %', v_ile; end if;
+  raise notice 'OK (C1): A+B rozliczone; przypisanie 400 zł rozbite A=200/B=200; gotówka A=0/B=100 zł';
+
+  -- ── C2. Cofnięcie dnia A → A znika, B zostaje; plasterek A usunięty ────────
+  perform cofnij_rozliczenie(v_sett_a);
+  select count(*) into v_ile from day_settlements where id = v_sett_a;
+  if v_ile <> 0 then raise exception 'FAIL: rozliczenie A nie zostało usunięte'; end if;
+  select count(*) into v_ile from day_settlements where id = v_sett_b;
+  if v_ile <> 1 then raise exception 'FAIL: rozliczenie B zniknęło przy cofaniu A'; end if;
+  select count(*) into v_ile from payments where warsaw_date(data) = date '2003-03-05' and locked;
+  if v_ile <> 0 then raise exception 'FAIL: wpisy dnia A pozostały zablokowane (% szt.)', v_ile; end if;
+  select count(*) into v_ile from payments where warsaw_date(data) = date '2003-03-06' and not locked;
+  if v_ile <> 0 then raise exception 'FAIL: wpisy dnia B odblokowane przy cofaniu A'; end if;
+  select count(*) into v_ile from cost_payments where settlement_id = v_sett_a;
+  if v_ile <> 0 then raise exception 'FAIL: przypisanie dnia A nie zostało usunięte'; end if;
+  -- Pozostał tylko plasterek B (200 zł) → pokryte 20000, częściowo.
+  select status_pokrycia, pokryte_grosze into v_status, v_pokryte from costs_coverage where id = v_cost;
+  if v_status <> 'czesciowo_pokryty' or v_pokryte <> 20000 then
+    raise exception 'FAIL: po cofnięciu A oczekiwano czesciowo/20000, jest %/%', v_status, v_pokryte;
+  end if;
+  raise notice 'OK (C2): dzień A cofnięty (wpisy odblokowane, plasterek usunięty); B nietknięty';
+
+  -- ── C2b. Do odblokowanego dnia A można znów dodać płatność ────────────────
+  insert into payments (klientka, kwota_grosze, metoda, stylistka, data)
+  values ('TEST CF A-po-cofnieciu', 3000, 'cash', 'patrycja', timestamptz '2003-03-05 16:00+01');
+  raise notice 'OK (C2b): po cofnięciu dnia A dzień znów przyjmuje płatności';
+
+  -- ── C3. Odhaczenie i odznaczenie „gotówka oddana" na dniu B ───────────────
+  perform oznacz_gotowke_oddana(v_sett_b, true, 'patrycja');
+  select gotowka_oddana, gotowka_oddana_przez into v_bool, v_przez from day_settlements where id = v_sett_b;
+  if not v_bool or v_przez <> 'patrycja' then
+    raise exception 'FAIL: oznaczenie gotówki oddanej nie zapisane (oddana=%, przez=%)', v_bool, v_przez;
+  end if;
+  perform oznacz_gotowke_oddana(v_sett_b, false, 'patrycja');
+  select gotowka_oddana, gotowka_oddana_przez into v_bool, v_przez from day_settlements where id = v_sett_b;
+  if v_bool or v_przez is not null then
+    raise exception 'FAIL: odznaczenie gotówki nie wyczyściło pól (oddana=%, przez=%)', v_bool, v_przez;
+  end if;
+  raise notice 'OK (C3): „gotówka oddana" — odhaczenie i odznaczenie działa';
+
+  -- ── C4. Bez flagi korekty rozliczenie B nadal nieusuwalne z ręki ──────────
+  begin
+    delete from day_settlements where id = v_sett_b;
+    raise exception 'FAIL: bezpośrednie usunięcie rozliczenia przeszło (poza RPC)';
+  exception when others then
+    if sqlerrm like 'FAIL:%' then raise; end if;
+    raise notice 'OK (C4): bezpośredni DELETE rozliczenia dalej odrzucony — %', sqlerrm;
+  end;
+
+  -- ── C5. Cofnięcie dnia B → wszystko czyste, koszt znów niepokryty ─────────
+  perform cofnij_rozliczenie(v_sett_b);
+  select count(*) into v_ile from cost_payments where cost_id = v_cost and zrodlo = 'card_assignment';
+  if v_ile <> 0 then raise exception 'FAIL: po cofnięciu B pozostały przypisania (% szt.)', v_ile; end if;
+  select status_pokrycia into v_status from costs_coverage where id = v_cost;
+  if v_status <> 'niepokryty' then raise exception 'FAIL: po cofnięciu B oczekiwano niepokryty, jest %', v_status; end if;
+  select count(*) into v_ile from payments where warsaw_date(data) = date '2003-03-06' and locked;
+  if v_ile <> 0 then raise exception 'FAIL: wpisy dnia B pozostały zablokowane'; end if;
+  raise notice 'OK (C5): dzień B cofnięty; koszt znów niepokryty, wpisy odblokowane';
+
+  -- ── C6. Cofnięcie nieistniejącego rozliczenia → wyjątek ───────────────────
+  begin
+    perform cofnij_rozliczenie(gen_random_uuid());
+    raise exception 'FAIL: cofnięcie nieistniejącego rozliczenia przeszło';
+  exception when others then
+    if sqlerrm like 'FAIL:%' then raise; end if;
+    raise notice 'OK (C6): cofnięcie nieistniejącego rozliczenia odrzucone — %', sqlerrm;
+  end;
+
+  -- Celowy wyjątek — wycofuje wszystkie dane testowe.
+  raise exception 'SMOKE_TEST_ROLLBACK: wszystkie testy cofania przeszły — dane testowe wycofane';
 end;
 $$;

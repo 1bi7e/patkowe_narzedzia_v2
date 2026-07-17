@@ -145,6 +145,12 @@ export interface Database {
           suma_kart_agata_grosze: number
           zatwierdzila: Database['public']['Enums']['stylistka']
           created_at: string
+          /** Gotówka, którą Patrycja jest winna Agacie za ten dzień (karty Agaty − przypisania). */
+          gotowka_dla_agaty_grosze: number
+          /** Czy Patrycja przekazała już Agacie tę gotówkę. */
+          gotowka_oddana: boolean
+          gotowka_oddana_at: string | null
+          gotowka_oddana_przez: Database['public']['Enums']['stylistka'] | null
         }
         Insert: {
           id?: string
@@ -153,6 +159,10 @@ export interface Database {
           suma_kart_agata_grosze: number
           zatwierdzila: Database['public']['Enums']['stylistka']
           created_at?: string
+          gotowka_dla_agaty_grosze?: number
+          gotowka_oddana?: boolean
+          gotowka_oddana_at?: string | null
+          gotowka_oddana_przez?: Database['public']['Enums']['stylistka'] | null
         }
         Update: {
           id?: string
@@ -161,6 +171,10 @@ export interface Database {
           suma_kart_agata_grosze?: number
           zatwierdzila?: Database['public']['Enums']['stylistka']
           created_at?: string
+          gotowka_dla_agaty_grosze?: number
+          gotowka_oddana?: boolean
+          gotowka_oddana_at?: string | null
+          gotowka_oddana_przez?: Database['public']['Enums']['stylistka'] | null
         }
         Relationships: []
       }
@@ -211,6 +225,22 @@ export interface Database {
           p_przypisania?: Json
         }
         Returns: string[]
+      }
+      /** Cofa rozliczenie jednego dnia (usuwa przypisania, odblokowuje płatności, kasuje rozliczenie). */
+      cofnij_rozliczenie: {
+        Args: {
+          p_settlement_id: string
+        }
+        Returns: undefined
+      }
+      /** Odhacza przekazanie Agacie gotówki z rozliczenia (gotowka_oddana + kto). */
+      oznacz_gotowke_oddana: {
+        Args: {
+          p_settlement_id: string
+          p_oddana: boolean
+          p_przez: Database['public']['Enums']['stylistka']
+        }
+        Returns: undefined
       }
     }
     Enums: {

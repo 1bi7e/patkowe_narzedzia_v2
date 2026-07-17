@@ -47,3 +47,42 @@ export async function rozliczDni(
 
   return { ok: true, ids: (data ?? []) as string[] }
 }
+
+/** Powód nieudanej korekty rozliczenia (cofnięcie / odhaczenie gotówki). */
+export type PowodKorekty = 'juz_cofniete' | 'inny'
+
+export type WynikKorekty =
+  | { ok: true }
+  | { ok: false; powod: PowodKorekty; komunikat: string }
+
+/**
+ * Cofa rozliczenie jednego dnia (RPC cofnij_rozliczenie): usuwa przypisania kart
+ * tego dnia, odblokowuje jego płatności i kasuje wiersz rozliczenia. Brak wiersza
+ * = ktoś cofnął go równolegle (wyścig) — UI wtedy tylko odświeża.
+ */
+export async function cofnijRozliczenie(settlementId: string): Promise<WynikKorekty> {
+  const { error } = await supabase.rpc('cofnij_rozliczenie', { p_settlement_id: settlementId })
+  if (error) {
+    const powod: PowodKorekty = /nie istnieje/i.test(error.message) ? 'juz_cofniete' : 'inny'
+    return { ok: false, powod, komunikat: error.message }
+  }
+  return { ok: true }
+}
+
+/** Odhacza (lub cofa odhaczenie) przekazania Agacie gotówki z rozliczenia. */
+export async function oznaczGotowkeOddana(
+  settlementId: string,
+  oddana: boolean,
+  przez: Stylistka,
+): Promise<WynikKorekty> {
+  const { error } = await supabase.rpc('oznacz_gotowke_oddana', {
+    p_settlement_id: settlementId,
+    p_oddana: oddana,
+    p_przez: przez,
+  })
+  if (error) {
+    const powod: PowodKorekty = /nie istnieje/i.test(error.message) ? 'juz_cofniete' : 'inny'
+    return { ok: false, powod, komunikat: error.message }
+  }
+  return { ok: true }
+}
