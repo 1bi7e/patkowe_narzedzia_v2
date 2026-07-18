@@ -295,19 +295,29 @@ begin
   raise notice 'OK (R5): anon może dodać i poprawić zwrot gotówkowy';
 
   -- ── R6. anon woła korygujące RPC → brak uprawnień (grant tylko authenticated) ─
+  -- Musimy wymagać KONKRETNIE odmowy uprawnień (insufficient_privilege / 42501).
+  -- Łapanie „when others" dawało fałszywy pass: gdy anon MA execute, funkcja
+  -- wykonuje się i rzuca P0001 „Rozliczenie nie istnieje" (losowy uuid) — inny
+  -- błąd niż nasz FAIL, więc test raportował OK, przepuszczając realną dziurę.
   begin
     perform cofnij_rozliczenie(gen_random_uuid());
-    raise exception 'FAIL: anon wywołał cofnij_rozliczenie';
-  exception when others then
-    if sqlerrm like 'FAIL:%' then raise; end if;
-    raise notice 'OK (R6a): anon nie może wołać cofnij_rozliczenie — %', sqlerrm;
+    raise exception 'FAIL: anon wykonał cofnij_rozliczenie (brak odmowy uprawnień)';
+  exception
+    when insufficient_privilege then
+      raise notice 'OK (R6a): anon nie może wołać cofnij_rozliczenie — %', sqlerrm;
+    when others then
+      if sqlerrm like 'FAIL:%' then raise; end if;
+      raise exception 'FAIL: cofnij_rozliczenie wykonał się jako anon (oczekiwano 42501, było %): %', sqlstate, sqlerrm;
   end;
   begin
     perform oznacz_gotowke_oddana(gen_random_uuid(), true, 'patrycja');
-    raise exception 'FAIL: anon wywołał oznacz_gotowke_oddana';
-  exception when others then
-    if sqlerrm like 'FAIL:%' then raise; end if;
-    raise notice 'OK (R6b): anon nie może wołać oznacz_gotowke_oddana — %', sqlerrm;
+    raise exception 'FAIL: anon wykonał oznacz_gotowke_oddana (brak odmowy uprawnień)';
+  exception
+    when insufficient_privilege then
+      raise notice 'OK (R6b): anon nie może wołać oznacz_gotowke_oddana — %', sqlerrm;
+    when others then
+      if sqlerrm like 'FAIL:%' then raise; end if;
+      raise exception 'FAIL: oznacz_gotowke_oddana wykonał się jako anon (oczekiwano 42501, było %): %', sqlstate, sqlerrm;
   end;
 
   -- Celowy wyjątek — wycofuje wszystkie dane testowe.
