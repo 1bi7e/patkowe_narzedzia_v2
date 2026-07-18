@@ -16,18 +16,18 @@
   --color-rose-600: #a05a4c;
   --color-rose-700: #7f4539;
 
-  /* Złoto — oszczędnie, w detalach */
-  --color-gold-100: #f8f0dc;
-  --color-gold-200: #f0e2bc;
-  --color-gold-300: #e3cb9c;
-  --color-gold-400: #d4b270;
-  --color-gold-500: #c39a58;
-  --color-gold-600: #a87f3e;
-  --color-gold-700: #8a6730;
+  /* Złoto — oszczędnie, w detalach; odcień przestrojony pod złoto z logo */
+  --color-gold-100: #faf1cf;
+  --color-gold-200: #f5e4a6;
+  --color-gold-300: #edd37e;
+  --color-gold-400: #e0bd58;
+  --color-gold-500: #cda23c;
+  --color-gold-600: #a87d24;
+  --color-gold-700: #876212;
 
   /* Kremowa biel */
   --color-cream-25: #fefbf5;
-  --color-cream-50: #fbf6ec;
+  --color-cream-50: #f5ecd9;
   --color-cream-100: #f6eddd;
   --color-cream-200: #efe1c9;
 
@@ -60,9 +60,9 @@
   --radius-arch: 999px 999px 16px 16px;
 
   /* Cienie — zawsze w tonacji złota, nigdy szare */
-  --shadow-satin-sm: 0 1px 2px rgba(168, 127, 62, 0.06), 0 2px 10px rgba(168, 127, 62, 0.08);
-  --shadow-satin: 0 2px 6px rgba(168, 127, 62, 0.06), 0 14px 36px rgba(168, 127, 62, 0.14);
-  --shadow-satin-lg: 0 6px 16px rgba(168, 127, 62, 0.09), 0 28px 72px rgba(168, 127, 62, 0.2);
+  --shadow-satin-sm: 0 1px 2px rgba(168, 125, 36, 0.06), 0 2px 10px rgba(168, 125, 36, 0.08);
+  --shadow-satin: 0 2px 6px rgba(168, 125, 36, 0.06), 0 14px 36px rgba(168, 125, 36, 0.14);
+  --shadow-satin-lg: 0 6px 16px rgba(168, 125, 36, 0.09), 0 28px 72px rgba(168, 125, 36, 0.2);
 
   /* Krzywa ruchu „satin" */
   --ease-satin: cubic-bezier(0.22, 0.61, 0.36, 1);
@@ -94,11 +94,11 @@
 
 /* Tokeny używane wyłącznie przez var() (gradienty, focus ring, scrim, czasy) */
 :root {
-  --gradient-satin-gold: linear-gradient(155deg, #e0c185 0%, #c39a58 52%, #d4af6b 100%);
+  --gradient-satin-gold: linear-gradient(155deg, #e5cc4f 0%, #c09841d3 52%, #c5a04e 100%);
   --gradient-satin-rose: linear-gradient(160deg, #fbf3f0 0%, #f3dcd6 55%, #f9eee6 100%);
   --gradient-satin-cream: linear-gradient(180deg, #fefbf5 0%, #f6eddd 100%);
 
-  --ring-gold: 0 0 0 3px rgba(212, 178, 112, 0.32);
+  --ring-gold: 0 0 0 3px rgba(224, 189, 88, 0.32);
   --scrim: rgba(109, 86, 74, 0.38);
 
   --dur-fast: 160ms;

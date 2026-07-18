@@ -223,7 +223,7 @@ export function DodajPlatnoscSheet({ open, onClose, stylistka, platnosc, onZapis
         {blad && <p className="text-[13px] text-error-500">{blad}</p>}
         {!online && !blad && <p className="text-[13px] text-brown-500">{KOMUNIKAT_OFFLINE}</p>}
 
-        <Button variant="dark" size="lg" fullWidth disabled={zajety || !online} onClick={zapisz}>
+        <Button variant="gold" size="lg" fullWidth disabled={zajety || !online} onClick={zapisz}>
           {zapisuje ? 'Zapisuję…' : trybEdycji ? 'Zapisz zmiany' : 'Zapisz płatność'}
         </Button>
 

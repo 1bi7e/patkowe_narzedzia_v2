@@ -215,7 +215,7 @@ export function DodajKosztSheet({ open, onClose, stylistka, onZapisano }: DodajK
         {blad && <p className="text-[13px] text-error-500">{blad}</p>}
         {!online && !blad && <p className="text-[13px] text-brown-500">{KOMUNIKAT_OFFLINE}</p>}
 
-        <Button variant="dark" size="lg" fullWidth disabled={zapisuje || !online} onClick={zapisz}>
+        <Button variant="gold" size="lg" fullWidth disabled={zapisuje || !online} onClick={zapisz}>
           {zapisuje ? 'Zapisuję…' : 'Zapisz koszt'}
         </Button>
       </div>

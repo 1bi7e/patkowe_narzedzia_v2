@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
-import { Chip, Icon, Input, KontoPill, Segment, Sheet } from '../components'
+import { KontoPill, Segment } from '../components'
 import type { ToastTone } from '../components'
 import { useStylistka } from '../context/StylistkaContext'
 import { dataWarszawa } from '../lib/dzien'
-import { czyWZakresie, miesiacOkres, nazwaOkresu, wlasnyOkres, type Okres } from '../lib/okres'
+import { czyWZakresie, miesiacOkres } from '../lib/okres'
 import type { StanKosztow } from '../lib/useKoszty'
 import { usePlatnosciOkresu } from '../lib/usePlatnosciOkresu'
 import type { StanRozliczone } from '../lib/useRozliczone'
@@ -27,9 +27,10 @@ type FinanseScreenProps = {
 
 /**
  * Zakładka „Finanse" — kontener trzech pod-zakładek (Podsumowanie / Koszty /
- * Historia) z współdzielonym okresem wybieranym z nagłówka (overline = przycisk
- * otwierający arkusz okresu). Płatności okresu ładuje `usePlatnosciOkresu`,
- * koszty przychodzą z powłoki (useKoszty) i są zawężane do okresu client-side.
+ * Historia). Okres jest na stałe bieżącym miesiącem (wybór okresu usunięty —
+ * na razie, do ewentualnego przywrócenia). Płatności okresu ładuje
+ * `usePlatnosciOkresu`, koszty przychodzą z powłoki (useKoszty) i są zawężane
+ * do okresu client-side.
  */
 export function FinanseScreen({
   koszty,
@@ -43,8 +44,7 @@ export function FinanseScreen({
   const kto = stylistka as Stylistka
   const dzis = dataWarszawa()
   const [podTab, setPodTab] = useState<PodTab>('podsumowanie')
-  const [okres, setOkres] = useState<Okres>(() => miesiacOkres(dzis, 0))
-  const [okresOtwarty, setOkresOtwarty] = useState(false)
+  const okres = useMemo(() => miesiacOkres(dzis, 0), [dzis])
 
   // Okres dotyczy tylko Podsumowania i Historii — Koszty pokazują wszystko.
   const zOkresem = podTab === 'podsumowanie' || podTab === 'historia'
@@ -62,28 +62,13 @@ export function FinanseScreen({
 
   return (
     <>
-      <header className="flex items-start justify-between gap-3">
-        <div>
-          {zOkresem ? (
-            <button
-              type="button"
-              onClick={() => setOkresOtwarty(true)}
-              className="flex items-center gap-[5px] text-[12px] font-medium uppercase tracking-[0.18em] text-gold-600"
-            >
-              {nazwaOkresu(okres)}
-              <Icon name="caret-down" size={13} />
-            </button>
-          ) : (
-            <p className="text-[12px] font-medium uppercase tracking-[0.18em] text-gold-600">
-              Koszty i pokrycia
-            </p>
-          )}
-          <h1 className="mt-1 font-serif text-h2 font-medium text-brown-800">
-            Finanse<span className="italic text-rose-500">.</span>
-          </h1>
-        </div>
+      <header className="flex items-center justify-between gap-3">
+        <p className="text-[19px] font-medium uppercase tracking-[0.16em] text-gold-600">
+          Finanse
+        </p>
         <KontoPill stylistka={kto} onWyloguj={wyloguj} />
       </header>
+      <div className="mt-4 h-px w-full bg-linear-to-r from-gold-300 to-transparent" />
 
       <div className="mt-6">
         <Segment<PodTab>
@@ -130,95 +115,6 @@ export function FinanseScreen({
         )}
       </div>
 
-      {okresOtwarty && (
-        <SheetOkresu
-          okres={okres}
-          onZmiana={setOkres}
-          onClose={() => setOkresOtwarty(false)}
-          dzis={dzis}
-        />
-      )}
     </>
-  )
-}
-
-/**
- * Arkusz wyboru okresu (otwierany z overline'u nagłówka). Miesiące stosują się
- * i zamykają arkusz od razu; „Własny…" odsłania pola Od/Do stosowane na żywo.
- */
-function SheetOkresu({
-  okres,
-  onZmiana,
-  onClose,
-  dzis,
-}: {
-  okres: Okres
-  onZmiana: (o: Okres) => void
-  onClose: () => void
-  dzis: string
-}) {
-  const [wlasnyOtwarty, setWlasnyOtwarty] = useState(okres.typ === 'wlasny')
-  const [od, setOd] = useState(okres.od)
-  const [do_, setDo] = useState(okres.do)
-
-  function wybierzMiesiac(przes: 0 | -1) {
-    onZmiana(miesiacOkres(dzis, przes))
-    onClose()
-  }
-
-  // Otwiera pola z zakresem bieżącego okresu i od razu je stosuje — chip „Własny…"
-  // i nagłówek są spójne, a pola prefillują aktualny zakres.
-  function otworzWlasny() {
-    setOd(okres.od)
-    setDo(okres.do)
-    setWlasnyOtwarty(true)
-    onZmiana(wlasnyOkres(okres.od, okres.do))
-  }
-
-  function zastosuj(nowyOd: string, nowyDo: string) {
-    if (nowyOd && nowyDo && nowyOd <= nowyDo) onZmiana(wlasnyOkres(nowyOd, nowyDo))
-  }
-
-  return (
-    <Sheet open onClose={onClose} title="Okres">
-      <div className="flex flex-wrap gap-2">
-        <Chip active={okres.typ === 'ten_miesiac'} onClick={() => wybierzMiesiac(0)}>
-          Ten miesiąc
-        </Chip>
-        <Chip active={okres.typ === 'poprzedni'} onClick={() => wybierzMiesiac(-1)}>
-          Poprzedni
-        </Chip>
-        <Chip active={okres.typ === 'wlasny'} onClick={otworzWlasny}>
-          Własny…
-        </Chip>
-      </div>
-
-      {wlasnyOtwarty && (
-        <div className="mt-4 flex items-end gap-3">
-          <div className="flex-1">
-            <Input
-              type="date"
-              label="Od"
-              value={od}
-              onChange={(e) => {
-                setOd(e.target.value)
-                zastosuj(e.target.value, do_)
-              }}
-            />
-          </div>
-          <div className="flex-1">
-            <Input
-              type="date"
-              label="Do"
-              value={do_}
-              onChange={(e) => {
-                setDo(e.target.value)
-                zastosuj(od, e.target.value)
-              }}
-            />
-          </div>
-        </div>
-      )}
-    </Sheet>
   )
 }

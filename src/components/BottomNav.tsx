@@ -24,7 +24,7 @@ export function BottomNav({ active, onNavigate, onDodajPlatnosc, onDodajKoszt }:
 
   return (
     <nav
-      className="flex items-center border-t border-rose-200 bg-[rgba(251,246,236,0.88)] px-0 pt-[10px] backdrop-blur-[10px]"
+      className="flex items-center border-t border-rose-200 bg-[rgba(245,236,217,0.88)] px-0 pt-[10px] backdrop-blur-[10px]"
       style={{ paddingBottom: 'calc(4px + env(safe-area-inset-bottom))' }}
     >
       <NavSlot
@@ -110,7 +110,7 @@ function NavSlot({
       <span
         className={[
           'text-[10px] uppercase tracking-[0.1em]',
-          active ? 'font-medium text-brown-800' : 'font-light text-brown-400',
+          active ? 'font-medium text-gold-700' : 'font-light text-brown-400',
         ].join(' ')}
       >
         {label}

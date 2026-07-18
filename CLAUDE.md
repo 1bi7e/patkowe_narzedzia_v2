@@ -66,7 +66,7 @@ Hard constraints:
 - Gold (`gold-*`) is an accent: max ~1 gold element per section. Shadows are gold-tinted, never gray.
 - Icons: Phosphor Light only — **no emoji** in UI.
 - Copy addresses the user as „Ty" (capitalized), warm boutique tone, sentence case (uppercase + letter-spacing only for labels/buttons/overlines). Section heading canon: gold uppercase overline → serif heading with an italic accent → gold hairline rule → light lead.
-- No logo exists — the wordmark is set typographically („Patkowe *Cudeńka*"); never draw a logo.
+- The logo is [src/assets/logo.png](src/assets/logo.png) (gold nail-polish pour, raster; shown on the login/account screens) and is the color reference for `--gradient-satin-gold`. In-app the wordmark stays typographic („Patkowe *Cudeńka*"); never draw a new logo.
  - "Kwoty zawsze w groszach jako integer, nigdy float"
 - "Wpisy z locked=true są nieedytowalne — egzekwowane w bazie"
 - "Mobile first, testuj na viewport iPhone"
